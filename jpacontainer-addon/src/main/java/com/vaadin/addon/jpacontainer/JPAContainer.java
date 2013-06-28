@@ -867,7 +867,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    private HashMap<Object, LinkedList<WeakReference<JPAContainerItem<T>>>> getItemRegistry() {
+    protected HashMap<Object, LinkedList<WeakReference<JPAContainerItem<T>>>> getItemRegistry() {
         if (itemRegistry == null) {
             itemRegistry = new HashMap<Object, LinkedList<WeakReference<JPAContainerItem<T>>>>();
         }
