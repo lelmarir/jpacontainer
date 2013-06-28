@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ivysettings>	
+	<!--
+	    This property is used later in the ivy.xml file to set
+	    the project's revision. Unless overridden, it defaults
+	    to the Maven SNAPSHOT convention, as that it works well
+	    for publishing local test builds to ~/.m2/repository.
+  	-->	
+	<property name="revision" value="SNAPSHOT" override="false"/>
+
+	<credentials host="192.168.0.5" realm="Sonatype Nexus Repository Manager" username="admin" passwd="servsif"/>
+
+	<settings defaultResolver="default" />
+
+	<!-- Pulls in the "public" resolver for ibiblio-hosted jars. -->
+  	<include url="${ivy.default.settings.dir}/ivysettings-public.xml"/>
+ 
+	<resolvers>
+		<filesystem name="local" checkmodified="true" local="true"
+			force="true">
+			<ivy pattern="${ivy.default.ivy.user.dir}/local/[organisation]/[module](/[branch])/ivy-[revision].xml" />
+			<artifact pattern="${ivy.default.ivy.user.dir}/local/[organisation]/[module](/[branch])/[type]/[artifact]-[revision].[ext]" />
+		</filesystem>
+      	<filesystem name="local-maven-2" m2compatible="true"
+            local="true">
+            <artifact
+                pattern="${user.home}/.m2/local/[organisation]/[module]/[revision]/[module]-[revision].[ext]" />
+            <ivy
+                pattern="${user.home}/.m2/local/[organisation]/[module]/[revision]/[module]-[revision].pom" />
+        </filesystem>    
+        
+        <ibiblio name="central-mirror" m2compatible="true" root="http://192.168.0.5:8081/nexus/content/repositories/central/" />
+        
+        <ibiblio name="nexus-releases" m2compatible="true" root="http://192.168.0.5:8081/nexus/content/repositories/releases/" />
+        <ibiblio name="nexus-snaphots" m2compatible="true" root="http://192.168.0.5:8081/nexus/content/repositories/snapshots/" />
+
+		<chain name="vaadin">
+			<!-- Vaadin Add-on repository -->
+			<ibiblio name="vaadin-addons" usepoms="true" m2compatible="true"
+				root="http://maven.vaadin.com/vaadin-addons" />
+
+			<!-- Vaadin snapshots repository -->
+			<ibiblio name="vaadin-snapshots" usepoms="true" m2compatible="true"
+				root="https://oss.sonatype.org/content/repositories/vaadin-snapshots" />
+			<!-- Repository used for Vaadin modified smartsprites library -->
+			<dual name="custom-smartsprites">
+				<filesystem name="smartsprites-ivy">
+					<ivy pattern="${ivy.basedir}/ivymodule/[module]-ivy-[revision].xml" />
+				</filesystem>
+				<url name="smartsprites-artifact">
+					<artifact
+						pattern="http://dev.vaadin.com/svn/versions/6.8/build/smartsprites/lib/[artifact](-[revision]).[ext]" />
+				</url>
+			</dual>
+		</chain>
+
+		<chain name="main">
+			<resolver ref="nexus-releases" />
+			<resolver ref="nexus-snaphots" />
+		
+			<!-- Local Repository -->
+			<resolver ref="central-mirror" />
+
+			<!-- Public Maven repository -->
+			<ibiblio name="public" m2compatible="true" />
+
+			<resolver ref="vaadin" />
+		</chain>
+
+		<chain name="default" returnFirst="true">
+			<resolver ref="local" />
+			<resolver ref="local-maven-2"/>
+			<resolver ref="main" />
+		</chain>
+	</resolvers>
+	<modules>
+		<module organisation="it.bonfiglioli" name="*" resolver="local" />
+		<module organisation="uk.co.q3c" name="*" resolver="local" />
+		<!-- Vaadin patched SmartSprites -->
+		<module organisation="com.carrotsearch" name="smartsprites"
+			revision="0.2.3-itmill" resolver="custom-smartsprites" />
+	</modules>
+
+</ivysettings>
