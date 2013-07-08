@@ -62,11 +62,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
      *            null).
      */
     JPAContainerItem(JPAContainer<T> container, T entity) {
-        this(container, entity, container.getEntityClassMetadata()
-                .getPropertyValue(
-                        entity,
-                        container.getEntityClassMetadata()
-                                .getIdentifierProperty().getName()), true);
+        this(container, entity, container.getIdentifierPropertyValue(entity), true);
     }
 
     /**
@@ -90,6 +86,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         assert entity != null : "entity must not be null";
         this.entity = entity;
         this.container = container;
+        //TODO don't create a new propertyList if it's exacly as the parent one, create only when it diverge
         this.propertyList = new PropertyList<T>(container.getPropertyList());
         this.itemId = itemId;
         if (itemId == null) {
@@ -102,7 +99,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
-	public Object getItemId() {
+    public Object getItemId() {
         return itemId;
     }
 
@@ -113,13 +110,13 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
-	public void addNestedContainerProperty(String nestedProperty)
+    public void addNestedContainerProperty(String nestedProperty)
             throws UnsupportedOperationException {
         propertyList.addNestedProperty(nestedProperty);
     }
 
     @Override
-	public EntityItemProperty getItemProperty(Object id) {
+    public EntityItemProperty getItemProperty(Object id) {
         assert id != null : "id must not be null";
         JPAContainerItemProperty<T> p = propertyMap.get(id);
         if (p == null) {
@@ -131,23 +128,19 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         }
         return p;
     }
-
-    //TODO: equivalente a getItemProperty().getType() ?
+    
     public Class<?> getItemPropertyType(String propertyName) {
     	return propertyList.getPropertyType(propertyName);
     }
     
-    //TODO: equivalente a getItemProperty().getValue() ?
     public Object getItemPropertyValue(String propertyName) {
     	return propertyList.getPropertyValue(entity, propertyName);
     }
     
-    //TODO: equivalente a getItemProperty().isPropertyWriteable() ?
     public boolean isItemPropertyWritable(String propertyName) {
     	return propertyList.isPropertyWritable(propertyName);
     }
     
-    //TODO: equivalente a getItemProperty().setValue() ?
     public void setItemPropertyValue(String propertyName,
             Object propertyValue) throws IllegalArgumentException,
             IllegalStateException {
@@ -164,7 +157,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
-	public Collection<String> getItemPropertyIds() {
+    public Collection<String> getItemPropertyIds() {
         /*
          * Although the container may only contain a few properties, all
          * properties are available for items.
@@ -173,7 +166,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
-	public boolean removeItemProperty(Object id)
+    public boolean removeItemProperty(Object id)
             throws UnsupportedOperationException {
         assert id != null : "id must not be null";
         if (id.toString().indexOf('.') > -1) {
@@ -184,10 +177,10 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
-	public boolean isModified() {
+    public boolean isModified() {
         return modified;
     }
-
+    
     public void setModified(boolean modified) {
     	this.modified = modified;
     }
@@ -204,12 +197,12 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
-	public boolean isDirty() {
+    public boolean isDirty() {
         return isPersistent() && dirty;
     }
 
     @Override
-	public boolean isPersistent() {
+    public boolean isPersistent() {
         return persistent;
     }
 
@@ -226,7 +219,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
-	public boolean isDeleted() {
+    public boolean isDeleted() {
         return isPersistent() && !getContainer().isBuffered() && deleted;
     }
 
@@ -243,12 +236,12 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
-	public EntityContainer<T> getContainer() {
+    public EntityContainer<T> getContainer() {
         return container;
     }
 
     @Override
-	public T getEntity() {
+    public T getEntity() {
         return this.entity;
     }
     
@@ -257,7 +250,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
-	public void commit() throws SourceException, InvalidValueException {
+    public void commit() throws SourceException, InvalidValueException {
         if (!isWriteThrough()) {
             try {
                 /*
@@ -276,7 +269,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
-	public void discard() throws SourceException {
+    public void discard() throws SourceException {
         if (!isWriteThrough()) {
             for (JPAContainerItemProperty<T> prop : propertyMap.values()) {
                 prop.discard();
@@ -333,7 +326,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
-	public void addListener(ValueChangeListener listener) {
+    public void addListener(ValueChangeListener listener) {
         /*
          * This operation affects ALL properties, so we have to iterate over the
          * list of ids instead of the map.
@@ -345,7 +338,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
-	public void removeListener(ValueChangeListener listener) {
+    public void removeListener(ValueChangeListener listener) {
         /*
          * This operation affects ALL properties, so we have to iterate over the
          * list of ids instead of the map.
@@ -357,12 +350,12 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
-	public void addValueChangeListener(ValueChangeListener listener) {
+    public void addValueChangeListener(ValueChangeListener listener) {
         addListener(listener);
     }
 
     @Override
-	public void removeValueChangeListener(ValueChangeListener listener) {
+    public void removeValueChangeListener(ValueChangeListener listener) {
         removeListener(listener);
     }
 
@@ -372,7 +365,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
-	@SuppressWarnings("serial")
+    @SuppressWarnings("serial")
     public void refresh() {
         if (isPersistent()) {
             T refreshedEntity = getContainer().getEntityProvider()
@@ -385,7 +378,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
                 setPersistent(false);
                 container.fireContainerItemSetChange(new ItemSetChangeEvent() {
                     @Override
-					public Container getContainer() {
+                    public Container getContainer() {
                         return container;
                     }
                 });
@@ -410,13 +403,13 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
-	public void setBuffered(boolean buffered) {
+    public void setBuffered(boolean buffered) {
         setWriteThrough(!buffered);
         setReadThrough(!buffered);
     }
 
     @Override
-	public boolean isBuffered() {
+    public boolean isBuffered() {
         return !isReadThrough() && !isWriteThrough();
     }
 }

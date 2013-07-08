@@ -401,8 +401,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
                     if (entityClassMetadata.hasIdentifierProperty()) {
                         PersistentPropertyMetadata identifierProperty = entityClassMetadata
                                 .getIdentifierProperty();
-                        Object itemId = entityClassMetadata.getPropertyValue(t,
-                                identifierProperty.getName());
+                        Object itemId = getIdentifierPropertyValue(t);
                         firePropertyValueChangeEvent(itemId,
                                 ((EntityPropertyUpdatedEvent<T>) event)
                                         .getPropertyId());
@@ -1162,8 +1161,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
         if (isWriteThrough()) {
             T result = ((MutableEntityProvider<T>) getEntityProvider())
                     .addEntity(entity);
-            id = getEntityClassMetadata().getPropertyValue(result,
-                    getEntityClassMetadata().getIdentifierProperty().getName());
+            id = getIdentifierPropertyValue(result);
         } else {
             id = bufferingDelegate.addEntity(entity);
         }
@@ -1176,6 +1174,11 @@ public class JPAContainer<T> implements EntityContainer<T>,
             setFireItemSetChangeOnProviderChange(true);
         }
         return id;
+    }
+    
+    protected Object getIdentifierPropertyValue(T entity) {
+    	return getEntityClassMetadata().getPropertyValue(entity,
+                getEntityClassMetadata().getIdentifierProperty().getName());
     }
 
     /**
@@ -1479,10 +1482,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
             if (parent == null) {
                 return null;
             } else {
-                return getEntityClassMetadata().getPropertyValue(
-                        parent,
-                        getEntityClassMetadata().getIdentifierProperty()
-                                .getName());
+                return getIdentifierPropertyValue(parent);
             }
         }
     }
