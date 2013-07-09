@@ -413,7 +413,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
     }
 
     @SuppressWarnings("unchecked")
-    private void firePropertyValueChangeEvent(Object itemId, String propertyId) {
+    protected void firePropertyValueChangeEvent(Object itemId, String propertyId) {
         LinkedList<WeakReference<JPAContainerItem<T>>> linkedList;
         synchronized (getItemRegistry()) {
             LinkedList<WeakReference<JPAContainerItem<T>>> origList = getItemRegistry()
