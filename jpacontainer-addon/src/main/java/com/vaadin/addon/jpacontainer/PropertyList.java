@@ -62,6 +62,7 @@ final class PropertyList<T> implements Serializable {
     private Map<String, String> sortablePropertyMap = new HashMap<String, String>();
     private Set<String> nestedPropertyNames = new HashSet<String>();
     private Set<String> allPropertyNames = new HashSet<String>();
+	private Set<String> readOnlyPropertyNames = new HashSet<>();
 
     /**
      * Creates a new <code>PropertyList</code> for the specified metadata.
@@ -639,11 +640,31 @@ final class PropertyList<T> implements Serializable {
      */
     public boolean isPropertyWritable(String propertyName)
             throws IllegalArgumentException {
+		if (readOnlyPropertyNames.contains(propertyName)) {
+			return false;
+		} else {
+			return doIsPropertyWritable(propertyName);
+		}
+	}
+
+	/**
+	 * Checks if <code>propertyName</code> is really writable (even if the user
+	 * has set a writeable property as read only with #setPropertyWriteable()).
+	 * Nested properties are supported. This method works with property names in
+	 * the {@link #getAllAvailablePropertyNames() } set.
+	 * 
+	 * @param propertyName
+	 * @return
+	 * @throws IllegalArgumentException
+	 */
+	private boolean doIsPropertyWritable(String propertyName)
+			throws IllegalArgumentException {
         assert propertyName != null : "propertyName must not be null";
         if (!getAllAvailablePropertyNames().contains(propertyName)) {
             throw new IllegalArgumentException("Illegal property name: "
                     + propertyName);
         }
+
         if (isNestedProperty(propertyName)) {
             return getNestedProperty(propertyName).isWritable();
         } else {
@@ -652,6 +673,34 @@ final class PropertyList<T> implements Serializable {
     }
 
     /**
+	 * This method can set as read only a property that is writeable, but can
+	 * not set a read only property as writeable (untill it was writeable in the
+	 * first place)
+	 * 
+	 * @param propertyName
+	 * @param writeable
+	 */
+	public void setPropertyWriteable(String propertyName, boolean writeable) {
+		assert propertyName != null : "propertyName must not be null";
+		if (!getAllAvailablePropertyNames().contains(propertyName)) {
+			throw new IllegalArgumentException("Illegal property name: "
+					+ propertyName);
+		}
+
+		if (isPropertyWritable(propertyName) != writeable) {
+			if (writeable == true) {
+				boolean removed = readOnlyPropertyNames.remove(propertyName);
+				if(removed == false){
+					throw new UnsupportedOperationException(
+						"Can't set as writeable a property without the setter.");
+				}
+			} else /*if (writeable == false)*/ {
+				readOnlyPropertyNames.add(propertyName);
+			}
+		}
+	}
+
+	/**
      * Gets the value of <code>propertyName</code> from the instance
      * <code>object</code>. The property name may be nested, but must be in the
      * {@link #getAllAvailablePropertyNames() } set.

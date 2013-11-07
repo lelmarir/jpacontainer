@@ -181,6 +181,10 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 		return getPropertyList().isPropertyWritable(propertyName);
     }
     
+	public void setItemPropertyWriteable(String propertyName, boolean writeable) {
+		getPropertyList().setPropertyWriteable(propertyName, writeable);
+	}
+
 	public void setItemPropertyValue(String propertyName, Object propertyValue)
 			throws IllegalArgumentException, IllegalStateException {
 		getPropertyList().setPropertyValue(entity, propertyName, propertyValue);

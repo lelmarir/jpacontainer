@@ -171,8 +171,7 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty {
      */
     @Override
 	public void setReadOnly(boolean newStatus) {
-        throw new UnsupportedOperationException(
-                "The read only state cannot be changed");
+    	item.setItemPropertyWriteable(propertyId, !newStatus);
     }
 
     /**
