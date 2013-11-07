@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.UUID;
 
@@ -80,7 +81,7 @@ final class BufferedContainerDelegate<T> implements Serializable {
 
     private JPAContainer<T> container;
     // Delta list contains all changes
-    private List<Delta> deltaList = new LinkedList<Delta>();
+	private LinkedList<Delta> deltaList = new LinkedList<Delta>();
     // We need a list to maintain the order in which the items were added...
     private List<Object> addedItemIdsCache = new ArrayList<Object>();
     // ... and a map for storing the actual entities.
@@ -191,11 +192,11 @@ final class BufferedContainerDelegate<T> implements Serializable {
     }
 
     private void clear() {
-        deltaList.clear();
-        addedEntitiesCache.clear();
-        addedItemIdsCache.clear();
-        updatedEntitiesCache.clear();
-        deletedItemIdsCache.clear();
+		assert deltaList.isEmpty();
+		assert addedItemIdsCache.isEmpty() : addedItemIdsCache;
+		assert addedEntitiesCache.isEmpty() : addedEntitiesCache;
+		assert updatedEntitiesCache.isEmpty() : updatedEntitiesCache;
+		assert deletedItemIdsCache.isEmpty() : deletedItemIdsCache;
     }
 
     /**
@@ -211,6 +212,11 @@ final class BufferedContainerDelegate<T> implements Serializable {
         assert container.getEntityProvider() instanceof BatchableEntityProvider : "entityProvider is not batchable";
         BatchableEntityProvider<T> ep = (BatchableEntityProvider<T>) container
                 .getEntityProvider();
+
+		if(deltaList.isEmpty()) {
+			return;
+		}
+		
         ep.batchUpdate(new BatchableEntityProvider.BatchUpdateCallback<T>() {
 
             private static final long serialVersionUID = -5385980617323427732L;
@@ -218,17 +224,28 @@ final class BufferedContainerDelegate<T> implements Serializable {
             public void batchUpdate(
                     MutableEntityProvider<T> batchEnabledEntityProvider) {
                 try {
-                    for (Delta delta : deltaList) {
+					while (!deltaList.isEmpty()) {
+						Delta delta = deltaList.poll();
                         if (delta.type == DeltaType.ADD) {
                             batchEnabledEntityProvider.addEntity(delta.entity);
+							addedItemIdsCache.remove(delta.itemId);
+							addedEntitiesCache.remove(delta.entity);
                         } else if (delta.type == DeltaType.UPDATE) {
                             batchEnabledEntityProvider
                                     .updateEntity(delta.entity);
+							updatedEntitiesCache.remove(delta.itemId);
                         } else if (delta.type == DeltaType.DELETE) {
                             batchEnabledEntityProvider
                                     .removeEntity(delta.itemId);
+							deletedItemIdsCache.remove(delta.itemId);
                         }
                     }
+					assert deltaList.isEmpty();
+					assert addedItemIdsCache.isEmpty() : addedItemIdsCache;
+					assert addedEntitiesCache.isEmpty() : addedEntitiesCache;
+					assert updatedEntitiesCache.isEmpty() : updatedEntitiesCache;
+					assert deletedItemIdsCache.isEmpty() : deletedItemIdsCache;
+
                 } catch (Exception e) {
                     throw new SourceException(container, e);
                 }
@@ -278,9 +295,10 @@ final class BufferedContainerDelegate<T> implements Serializable {
         if (isAdded(itemId)) {
             addedEntitiesCache.remove(itemId);
             addedItemIdsCache.remove(itemId);
-            for (int i = deltaList.size() - 1; i >= 0; i--) {
-                if (deltaList.get(i).itemId.equals(itemId)) {
-                    deltaList.remove(i);
+			ListIterator<Delta> it = deltaList.listIterator(deltaList.size());
+			while(it.hasPrevious()) {				
+				if (it.previous().itemId.equals(itemId)) {
+					it.remove();
                 }
             }
         } else {
