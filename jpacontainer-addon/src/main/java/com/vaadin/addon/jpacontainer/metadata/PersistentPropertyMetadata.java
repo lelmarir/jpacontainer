@@ -286,13 +286,11 @@ public class PersistentPropertyMetadata extends PropertyMetadata {
     }
 
     /**
-     * Persistent properties are always writable.
-     * <p>
      * {@inheritDoc }.
      */
     @Override
     public boolean isWritable() {
-        return true; // field != null || super.isWritable();
+        return super.isWritable();
     }
 
     /*
