@@ -62,7 +62,8 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
      *            null).
      */
     JPAContainerItem(JPAContainer<T> container, T entity) {
-        this(container, entity, container.getIdentifierPropertyValue(entity), true);
+		this(container, entity, container.getIdentifierPropertyValue(entity),
+				true);
     }
 
     /**
@@ -86,8 +87,11 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         assert entity != null : "entity must not be null";
         this.entity = entity;
         this.container = container;
-        //TODO don't create a new propertyList if it's exacly as the parent one, create only when it diverge
-        this.propertyList = new PropertyList<T>(container.getPropertyList());
+		// the local propertyList will be inherited from container only if
+		// needed
+		this.propertyList = null;
+		// TODO when the item will be persisted and added to the container we
+		// must update the itemId
         this.itemId = itemId;
         if (itemId == null) {
             this.persistent = false;
@@ -95,6 +99,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
             this.persistent = persistent;
         }
         this.propertyMap = new HashMap<Object, JPAContainerItemProperty<T>>();
+		// the itemRegistry will ignore this item if the id is null
         container.registerItem(this);
     }
 
@@ -109,10 +114,45 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         throw new UnsupportedOperationException();
     }
 
-    @Override
+	/**
+	 * 
+	 * @return the local propertyList if present, or the container one.
+	 */
+	private PropertyList<T> getPropertyList() {
+		if (this.propertyList == null) {
+			// questo metodo chiamerebbe getPropertyList(false), quindi evito di
+			// fare un if in piu
+			return container.getPropertyList();
+		} else {
+			return getPropertyList(false);
+		}
+	}
+
+	/**
+	 * 
+	 * @param localCopy
+	 *            true if a local copy (inherited from container) must be
+	 *            created.
+	 * @return the local propertyList if present or localCopy is true, else the
+	 *         container one.
+	 */
+	private PropertyList<T> getPropertyList(boolean localCopy) {
+
+		if (this.propertyList == null) {
+			if (localCopy == true) {
+				this.propertyList = new PropertyList<T>(
+						container.getPropertyList());
+			} else {
+				return container.getPropertyList();
+			}
+		}
+		return this.propertyList;
+	}
+
+	@Override
     public void addNestedContainerProperty(String nestedProperty)
             throws UnsupportedOperationException {
-        propertyList.addNestedProperty(nestedProperty);
+		getPropertyList(true).addNestedProperty(nestedProperty);
     }
 
     @Override
@@ -130,21 +170,20 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
     
     public Class<?> getItemPropertyType(String propertyName) {
-    	return propertyList.getPropertyType(propertyName);
+		return getPropertyList().getPropertyType(propertyName);
     }
     
     public Object getItemPropertyValue(String propertyName) {
-    	return propertyList.getPropertyValue(entity, propertyName);
+		return getPropertyList().getPropertyValue(entity, propertyName);
     }
     
     public boolean isItemPropertyWritable(String propertyName) {
-    	return propertyList.isPropertyWritable(propertyName);
+		return getPropertyList().isPropertyWritable(propertyName);
     }
     
-    public void setItemPropertyValue(String propertyName,
-            Object propertyValue) throws IllegalArgumentException,
-            IllegalStateException {
-    	propertyList.setPropertyValue(entity, propertyName, propertyValue);
+	public void setItemPropertyValue(String propertyName, Object propertyValue)
+			throws IllegalArgumentException, IllegalStateException {
+		getPropertyList().setPropertyValue(entity, propertyName, propertyValue);
     	dirty = true;
     }
     
@@ -153,7 +192,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
     
     public boolean isItemPropertyLazyLoaded(String propertyName) {
-    	return propertyList.isPropertyLazyLoaded(propertyName);
+		return getPropertyList().isPropertyLazyLoaded(propertyName);
     }
 
     @Override
@@ -162,7 +201,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
          * Although the container may only contain a few properties, all
          * properties are available for items.
          */
-        return propertyList.getAllAvailablePropertyNames();
+		return getPropertyList().getAllAvailablePropertyNames();
     }
 
     @Override
@@ -170,7 +209,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
             throws UnsupportedOperationException {
         assert id != null : "id must not be null";
         if (id.toString().indexOf('.') > -1) {
-            return propertyList.removeProperty(id.toString());
+			return getPropertyList(true).removeProperty(id.toString());
         } else {
             return false;
         }
