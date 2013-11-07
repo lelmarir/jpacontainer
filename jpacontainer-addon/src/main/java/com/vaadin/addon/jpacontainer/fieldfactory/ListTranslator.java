@@ -104,6 +104,7 @@ public class ListTranslator extends PropertyTranslator {
         }
         
         Collections.sort(list, new Comparator() {
+            @Override
             public int compare(Object arg0, Object arg1) {
                 if(idx != null) {
                     return idx.indexOfId(arg0) - idx.indexOfId(arg1);

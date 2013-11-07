@@ -52,10 +52,12 @@ public class EntityProvider<T> extends LocalEntityProvider<T> implements
         return Util.getEntityManager(getJndiAddresses());
     }
 
+    @Override
     public void setJndiAddresses(JndiAddresses addresses) {
         this.jndiAddresses = addresses;
     }
 
+    @Override
     public JndiAddresses getJndiAddresses() {
         if (jndiAddresses == null) {
             return JndiAddresses.DEFAULTS;

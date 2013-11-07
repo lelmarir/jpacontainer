@@ -221,6 +221,7 @@ final class BufferedContainerDelegate<T> implements Serializable {
 
             private static final long serialVersionUID = -5385980617323427732L;
 
+            @Override
             public void batchUpdate(
                     MutableEntityProvider<T> batchEnabledEntityProvider) {
                 try {

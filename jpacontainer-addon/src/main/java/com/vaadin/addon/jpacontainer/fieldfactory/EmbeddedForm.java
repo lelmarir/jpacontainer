@@ -82,10 +82,12 @@ public class EmbeddedForm extends Form implements EmbeddableEditor {
         }
     }
 
+    @Override
     public EntityContainer getMasterEntityContainer() {
         return masterEntityContainer;
     }
 
+    @Override
     public Class<?> getEmbeddedClassType() {
         return getPropertyDataSource().getType();
     }

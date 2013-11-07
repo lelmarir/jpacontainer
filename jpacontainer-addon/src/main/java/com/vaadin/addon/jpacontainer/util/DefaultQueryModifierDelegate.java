@@ -38,6 +38,7 @@ public class DefaultQueryModifierDelegate implements QueryModifierDelegate {
      * 
      * This default implementation does nothing.
      */
+    @Override
     public void queryWillBeBuilt(CriteriaBuilder criteriaBuilder,
             CriteriaQuery<?> query) {
     }
@@ -47,6 +48,7 @@ public class DefaultQueryModifierDelegate implements QueryModifierDelegate {
      * 
      * This default implementation does nothing.
      */
+    @Override
     public void queryHasBeenBuilt(CriteriaBuilder criteriaBuilder,
             CriteriaQuery<?> query) {
     }
@@ -56,6 +58,7 @@ public class DefaultQueryModifierDelegate implements QueryModifierDelegate {
      * 
      * This default implementation does nothing.
      */
+    @Override
     public void filtersWillBeAdded(CriteriaBuilder criteriaBuilder,
             CriteriaQuery<?> query, List<Predicate> predicates) {
     }
@@ -65,6 +68,7 @@ public class DefaultQueryModifierDelegate implements QueryModifierDelegate {
      * 
      * This default implementation does nothing.
      */
+    @Override
     public void filtersWereAdded(CriteriaBuilder criteriaBuilder,
             CriteriaQuery<?> query) {
     }
@@ -74,6 +78,7 @@ public class DefaultQueryModifierDelegate implements QueryModifierDelegate {
      * 
      * This default implementation does nothing.
      */
+    @Override
     public void orderByWillBeAdded(CriteriaBuilder criteriaBuilder,
             CriteriaQuery<?> query, List<Order> orderBy) {
     }
@@ -83,6 +88,7 @@ public class DefaultQueryModifierDelegate implements QueryModifierDelegate {
      * 
      * This default implementation does nothing.
      */
+    @Override
     public void orderByWasAdded(CriteriaBuilder criteriaBuilder,
             CriteriaQuery<?> query) {
     }

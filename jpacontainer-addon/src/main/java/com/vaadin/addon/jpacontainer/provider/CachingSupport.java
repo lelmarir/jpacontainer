@@ -63,11 +63,13 @@ class CachingSupport<T> implements Serializable {
 
         private static final long serialVersionUID = 6142104349424102387L;
 
+        @Override
         public boolean passesFilter(Object itemId, Item item)
                 throws UnsupportedOperationException {
             return true;
         }
 
+        @Override
         public boolean appliesToProperty(Object propertyId) {
             return false;
         }

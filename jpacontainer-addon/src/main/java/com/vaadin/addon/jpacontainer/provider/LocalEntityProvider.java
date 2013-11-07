@@ -167,6 +167,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
      * @param entityManagerProvider
      *            The entity manager provider to set.
      */
+    @Override
     public void setEntityManagerProvider(
             EntityManagerProvider entityManagerProvider) {
         this.entityManagerProvider = entityManagerProvider;
@@ -179,6 +180,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
      * 
      * @return the entity manager provider,
      */
+    @Override
     public EntityManagerProvider getEntityManagerProvider() {
         return entityManagerProvider;
     }
@@ -189,6 +191,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
      * @param entityManager
      *            the entity manager to set.
      */
+    @Override
     public void setEntityManager(EntityManager entityManager) {
         this.entityManager = entityManager;
     }
@@ -208,6 +211,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
      * 
      * @return the entity manager.
      */
+    @Override
     public EntityManager getEntityManager() {
         if (entityManager != null) {
             return entityManager;
@@ -463,6 +467,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
         return tq.getSingleResult() == 1;
     }
 
+    @Override
     public boolean containsEntity(EntityContainer<T> container,
             Object entityId, Filter filter) {
         return doContainsEntity(container, entityId, filter);
@@ -475,6 +480,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
         return detachEntity(entity);
     }
 
+    @Override
     public T getEntity(EntityContainer<T> container, Object entityId) {
         return doGetEntity(entityId);
     }
@@ -498,6 +504,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
         }
     }
 
+    @Override
     public Object getEntityIdentifierAt(EntityContainer<T> container,
             Filter filter, List<SortBy> sortBy, int index) {
         return doGetEntityIdentifierAt(container, filter, sortBy, index);
@@ -543,6 +550,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
         return tq.getSingleResult().intValue();
     }
 
+    @Override
     public int getEntityCount(EntityContainer<T> container, Filter filter) {
         return doGetEntityCount(container, filter);
     }
@@ -574,6 +582,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
         }
     }
 
+    @Override
     public Object getFirstEntityIdentifier(EntityContainer<T> container,
             Filter filter, List<SortBy> sortBy) {
         return doGetFirstEntityIdentifier(container, filter, sortBy);
@@ -599,6 +608,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
         }
     }
 
+    @Override
     public Object getLastEntityIdentifier(EntityContainer<T> container,
             Filter filter, List<SortBy> sortBy) {
         return doGetLastEntityIdentifier(container, filter, sortBy);
@@ -738,6 +748,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
         return getSibling(container, entityId, filter, sortBy, false);
     }
 
+    @Override
     public Object getNextEntityIdentifier(EntityContainer<T> container,
             Object entityId, Filter filter, List<SortBy> sortBy) {
         return doGetNextEntityIdentifier(container, entityId, filter, sortBy);
@@ -752,6 +763,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
         return getSibling(container, entityId, filter, sortBy, true);
     }
 
+    @Override
     public Object getPreviousEntityIdentifier(EntityContainer<T> container,
             Object entityId, Filter filter, List<SortBy> sortBy) {
         return doGetPreviousEntityIdentifier(container, entityId, filter,
@@ -778,10 +790,12 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
         return entity;
     }
 
+    @Override
     public boolean isEntitiesDetached() {
         return entitiesDetached;
     }
 
+    @Override
     public void setEntitiesDetached(boolean detached)
             throws UnsupportedOperationException {
         this.entitiesDetached = detached;
@@ -799,6 +813,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
         return Collections.unmodifiableList(query.getResultList());
     }
 
+    @Override
     public List<Object> getAllEntityIdentifiers(EntityContainer<T> container,
             Filter filter, List<SortBy> sortBy) {
         return doGetAllEntityIdentifiers(container, filter, sortBy);
@@ -811,6 +826,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
      * com.vaadin.addon.jpacontainer.EntityProvider#setQueryModifierDelegate
      * (com.vaadin.addon.jpacontainer.EntityProvider.QueryModifierDelegate)
      */
+    @Override
     public void setQueryModifierDelegate(QueryModifierDelegate delegate) {
         this.queryModifierDelegate = delegate;
     }
@@ -821,6 +837,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
      * @see
      * com.vaadin.addon.jpacontainer.EntityProvider#getQueryModifierDelegate()
      */
+    @Override
     public QueryModifierDelegate getQueryModifierDelegate() {
         return queryModifierDelegate;
     }
@@ -884,11 +901,13 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
         }
     }
 
+    @Override
     public Object getIdentifier(T entity) {
         return entityClassMetadata.getPropertyValue(entity, entityClassMetadata
                 .getIdentifierProperty().getName());
     }
 
+    @Override
     public T refreshEntity(T entity) {
         if (getEntityManager().contains(entity)) {
             try {
@@ -933,6 +952,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
      * com.vaadin.addon.jpacontainer.EntityContainer#setLazyLoadingDelegate(
      * com.vaadin.addon.jpacontainer.EntityContainer.LazyLoadingDelegate)
      */
+    @Override
     public void setLazyLoadingDelegate(LazyLoadingDelegate delegate) {
         lazyLoadingDelegate = delegate;
         if (lazyLoadingDelegate != null) {
@@ -940,6 +960,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
         }
     }
 
+    @Override
     public LazyLoadingDelegate getLazyLoadingDelegate() {
         return lazyLoadingDelegate;
     }
@@ -949,6 +970,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
      * 
      * @see com.vaadin.addon.jpacontainer.EntityProvider#refresh()
      */
+    @Override
     public void refresh() {
         // Nothing to do in this implementation, since we don't keep any
         // items/entities cached.

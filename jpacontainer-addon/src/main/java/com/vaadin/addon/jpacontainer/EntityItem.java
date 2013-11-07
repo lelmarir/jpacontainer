@@ -117,6 +117,7 @@ public interface EntityItem<T> extends Item, Buffered,
      *         changes that have not yet been commited to the underlying Entity,
      *         false otherwise.
      */
+    @Override
     public boolean isModified();
 
     /**
@@ -143,6 +144,7 @@ public interface EntityItem<T> extends Item, Buffered,
      * @param listener
      *            the new listener to be registered.
      */
+    @Override
     public void addListener(Property.ValueChangeListener listener);
 
     /**
@@ -152,11 +154,13 @@ public interface EntityItem<T> extends Item, Buffered,
      * @param listener
      *            listener to be removed.
      */
+    @Override
     public void removeListener(Property.ValueChangeListener listener);
 
     /**
      * {@inheritDoc }
      */
+    @Override
     public EntityItemProperty getItemProperty(Object id);
 
     /**
@@ -192,6 +196,7 @@ public interface EntityItem<T> extends Item, Buffered,
      *             if the implementation does not support removing nested
      *             properties.
      */
+    @Override
     public boolean removeItemProperty(Object propertyId)
             throws UnsupportedOperationException;
 
@@ -203,6 +208,7 @@ public interface EntityItem<T> extends Item, Buffered,
      * @throws UnsupportedOperationException
      *             always thrown.
      */
+    @Override
     public boolean addItemProperty(Object id, Property property)
             throws UnsupportedOperationException;
 
@@ -216,6 +222,7 @@ public interface EntityItem<T> extends Item, Buffered,
      * properties that have been removed from the container will still show up
      * in this collection.
      */
+    @Override
     public Collection<?> getItemPropertyIds();
 
     /**

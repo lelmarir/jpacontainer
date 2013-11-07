@@ -115,6 +115,7 @@ public class AdvancedFilterableSupport implements AdvancedFilterable,
     /**
      * @see AdvancedFilterable#getFilterablePropertyIds()
      */
+    @Override
     public Collection<Object> getFilterablePropertyIds() {
         if (filterablePropertyIds == null) {
             return Collections.emptyList();
@@ -149,6 +150,7 @@ public class AdvancedFilterableSupport implements AdvancedFilterable,
     /**
      * @see AdvancedFilterable#isFilterable(java.lang.Object)
      */
+    @Override
     public boolean isFilterable(Object propertyId) {
         return getFilterablePropertyIds().contains(propertyId);
     }
@@ -186,6 +188,7 @@ public class AdvancedFilterableSupport implements AdvancedFilterable,
     /**
      * @see AdvancedFilterable#getFilters()
      */
+    @Override
     public List<Filter> getFilters() {
         return Collections.unmodifiableList(filters);
     }
@@ -193,6 +196,7 @@ public class AdvancedFilterableSupport implements AdvancedFilterable,
     /**
      * @see AdvancedFilterable#getAppliedFilters()
      */
+    @Override
     public List<Filter> getAppliedFilters() {
         return isApplyFiltersImmediately() ? getFilters() : Collections
                 .unmodifiableList(appliedFilters);
@@ -201,6 +205,7 @@ public class AdvancedFilterableSupport implements AdvancedFilterable,
     /**
      * @see AdvancedFilterable#setApplyFiltersImmediately(boolean)
      */
+    @Override
     public void setApplyFiltersImmediately(boolean applyFiltersImmediately) {
         this.applyFiltersImmediately = applyFiltersImmediately;
     }
@@ -208,6 +213,7 @@ public class AdvancedFilterableSupport implements AdvancedFilterable,
     /**
      * @see AdvancedFilterable#isApplyFiltersImmediately()
      */
+    @Override
     public boolean isApplyFiltersImmediately() {
         return applyFiltersImmediately;
     }
@@ -215,6 +221,7 @@ public class AdvancedFilterableSupport implements AdvancedFilterable,
     /**
      * @see AdvancedFilterable#applyFilters()
      */
+    @Override
     public void applyFilters() {
         unappliedFilters = false;
         appliedFilters.clear();
@@ -225,6 +232,7 @@ public class AdvancedFilterableSupport implements AdvancedFilterable,
     /**
      * @see AdvancedFilterable#hasUnappliedFilters()
      */
+    @Override
     public boolean hasUnappliedFilters() {
         return unappliedFilters;
     }

@@ -58,6 +58,7 @@ public class JoinFilter extends AbstractJunctionFilter {
      * @see com.vaadin.data.Container.Filter#passesFilter(java.lang.Object,
      * com.vaadin.data.Item)
      */
+    @Override
     public boolean passesFilter(Object itemId, Item item)
             throws UnsupportedOperationException {
         for (Filter f : getFilters()) {

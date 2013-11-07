@@ -62,6 +62,7 @@ public class CachingBatchableLocalEntityProvider<T> extends
         super(entityClass, entityManager);
     }
 
+    @Override
     public void batchUpdate(final BatchUpdateCallback<T> callback)
             throws UnsupportedOperationException {
         assert callback != null : "callback must not be null";
@@ -69,6 +70,7 @@ public class CachingBatchableLocalEntityProvider<T> extends
         try {
             runInTransaction(new Runnable() {
 
+                @Override
                 public void run() {
                     callback.batchUpdate(CachingBatchableLocalEntityProvider.this);
                 }

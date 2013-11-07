@@ -71,26 +71,32 @@ public class CachingMutableLocalEntityProvider<T> extends
         super(entityClass);
     }
 
+    @Override
     public void flush() {
         cachingSupport.flush();
     }
 
+    @Override
     public int getEntityCacheMaxSize() {
         return cachingSupport.getMaxCacheSize();
     }
 
+    @Override
     public boolean isCacheEnabled() {
         return cachingSupport.isCacheEnabled();
     }
 
+    @Override
     public void setCacheEnabled(boolean cacheInUse) {
         cachingSupport.setCacheEnabled(cacheInUse);
     }
 
+    @Override
     public boolean usesCache() {
         return cachingSupport.usesCache(null);
     }
 
+    @Override
     public void setEntityCacheMaxSize(int maxSize) {
         cachingSupport.setMaxCacheSize(maxSize);
     }
@@ -116,10 +122,12 @@ public class CachingMutableLocalEntityProvider<T> extends
         return isCacheEnabled() || super.isEntitiesDetached();
     }
 
+    @Override
     public boolean isCloneCachedEntities() {
         return cachingSupport.isCloneCachedEntities();
     }
 
+    @Override
     public void setCloneCachedEntities(boolean clone)
             throws UnsupportedOperationException {
         cachingSupport.setCloneCachedEntities(clone);
@@ -200,6 +208,7 @@ public class CachingMutableLocalEntityProvider<T> extends
         cachingSupport.clear();
     }
     
+    @Override
     public T refreshEntity(T entity) {
         cachingSupport.clear();
         return super.refreshEntity(entity);

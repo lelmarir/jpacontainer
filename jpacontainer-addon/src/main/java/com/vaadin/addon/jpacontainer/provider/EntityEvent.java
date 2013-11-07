@@ -48,10 +48,12 @@ abstract class EntityEvent<T> implements EntityProviderChangeEvent<T>,
         }
     }
 
+    @Override
     public Collection<T> getAffectedEntities() {
         return entities;
     }
 
+    @Override
     public EntityProvider<T> getEntityProvider() {
         return entityProvider;
     }

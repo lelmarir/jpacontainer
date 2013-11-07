@@ -48,10 +48,12 @@ public class HibernateLazyLoadingDelegate implements LazyLoadingDelegate {
 
     private EntityProvider<?> entityProvider;
 
+    @Override
     public void setEntityProvider(EntityProvider<?> ep) {
         entityProvider = ep;
     }
 
+    @Override
     public <E> E ensureLazyPropertyLoaded(E entity, String propertyName) {
         String prop = getRootPropertyName(propertyName);
         try {

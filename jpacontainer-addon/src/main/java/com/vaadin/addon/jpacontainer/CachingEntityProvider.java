@@ -104,6 +104,7 @@ public interface CachingEntityProvider<T> extends EntityProvider<T> {
      * 
      * @see #isCacheEnabled()
      */
+    @Override
     public boolean isEntitiesDetached();
 
     /**
@@ -114,6 +115,7 @@ public interface CachingEntityProvider<T> extends EntityProvider<T> {
      * 
      * @see #isCacheEnabled()
      */
+    @Override
     public void setEntitiesDetached(boolean detached)
             throws UnsupportedOperationException;
 

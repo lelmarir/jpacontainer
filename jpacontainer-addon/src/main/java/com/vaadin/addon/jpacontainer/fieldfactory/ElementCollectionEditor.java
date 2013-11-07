@@ -176,6 +176,7 @@ public class ElementCollectionEditor extends CustomField implements
         return referencedType;
     }
 
+    @Override
     public void handleAction(Action action, Object sender, Object target) {
         if (action == add) {
             addNew();
@@ -184,6 +185,7 @@ public class ElementCollectionEditor extends CustomField implements
         }
     }
 
+    @Override
     public Action[] getActions(Object target, Object sender) {
         return actions;
     }
@@ -213,10 +215,12 @@ public class ElementCollectionEditor extends CustomField implements
         }
     }
 
+    @Override
     public EntityContainer getMasterEntityContainer() {
         return containerForProperty;
     }
 
+    @Override
     public Class<?> getEmbeddedClassType() {
         return referencedType;
     }
@@ -249,15 +253,18 @@ public class ElementCollectionEditor extends CustomField implements
 
     private class MutableStrategy implements Strategy {
 
+        @Override
         public BeanItemContainer buildContainer() {
             return new BeanItemContainer(referencedType);
         }
 
+        @Override
         public void populateContainer() {
             Collection<?> elements = getElements();
             container.addAll(elements);
         }
 
+        @Override
         public void addNew() throws InstantiationException,
                 IllegalAccessException {
             Object newInstance = container.getBeanType().newInstance();
@@ -268,6 +275,7 @@ public class ElementCollectionEditor extends CustomField implements
             }
         }
 
+        @Override
         public void remove(Object itemId) {
             BeanItem item = container.getItem(itemId);
             container.removeItem(itemId);
@@ -278,6 +286,7 @@ public class ElementCollectionEditor extends CustomField implements
             }
         }
 
+        @Override
         public void commit() {
             Collection c = (Collection) getPropertyDataSource().getValue();
             boolean isNew = c == null;
@@ -310,6 +319,7 @@ public class ElementCollectionEditor extends CustomField implements
             notifyPropertyOfChangedList();
         }
 
+        @Override
         public void configureTable() {
         }
 
@@ -345,10 +355,12 @@ public class ElementCollectionEditor extends CustomField implements
 
     private class ImmutableStrategy implements Strategy {
 
+        @Override
         public BeanItemContainer buildContainer() {
             return new BeanItemContainer<ValueHolder>(ValueHolder.class);
         }
 
+        @Override
         public void populateContainer() {
             Collection<?> elements = getElements();
             ArrayList<ValueHolder> wrappedElements = new ArrayList<ValueHolder>();
@@ -358,6 +370,7 @@ public class ElementCollectionEditor extends CustomField implements
             container.addAll(wrappedElements);
         }
 
+        @Override
         public void addNew() throws InstantiationException,
                 IllegalAccessException {
             Object newInstance = referencedType.newInstance();
@@ -368,6 +381,7 @@ public class ElementCollectionEditor extends CustomField implements
             }
         }
 
+        @Override
         public void remove(Object itemId) {
             BeanItem item = container.getItem(itemId);
             container.removeItem(itemId);
@@ -378,6 +392,7 @@ public class ElementCollectionEditor extends CustomField implements
             }
         }
 
+        @Override
         public void commit() {
             Collection c = getElements();
             boolean isNew = c == null;
@@ -411,6 +426,7 @@ public class ElementCollectionEditor extends CustomField implements
 
         }
 
+        @Override
         public void configureTable() {
             getTable().setColumnHeaderMode(ColumnHeaderMode.HIDDEN);
         }
@@ -426,6 +442,7 @@ public class ElementCollectionEditor extends CustomField implements
         CssLayout buttons = new CssLayout();
         buttons.addComponent(new Button(getMasterDetailAddItemCaption(),
                 new ClickListener() {
+                    @Override
                     public void buttonClick(ClickEvent event) {
                         addNew();
                     }
@@ -434,6 +451,7 @@ public class ElementCollectionEditor extends CustomField implements
         // not selectable.
         buttons.addComponent(new Button(getMasterDetailRemoveItemCaption(),
                 new ClickListener() {
+                    @Override
                     public void buttonClick(ClickEvent event) {
                         remove(getTable().getValue());
                     }

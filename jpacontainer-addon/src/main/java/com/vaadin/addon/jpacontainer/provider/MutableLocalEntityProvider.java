@@ -130,12 +130,14 @@ public class MutableLocalEntityProvider<T> extends LocalEntityProvider<T>
         }
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public T addEntity(final T entity) {
         assert entity != null;
         final Object[] entityA = new Object[1];
         runInTransaction(new Runnable() {
 
+            @Override
             public void run() {
                 EntityManager em = getEntityManager();
                 entityA[0] = em.merge(entity);
@@ -147,12 +149,14 @@ public class MutableLocalEntityProvider<T> extends LocalEntityProvider<T>
         return dEntity;
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public void removeEntity(final Object entityId) {
         assert entityId != null;
         final Object[] entityA = new Object[1];
         runInTransaction(new Runnable() {
 
+            @Override
             public void run() {
                 EntityManager em = getEntityManager();
                 T entity = em.find(getEntityClassMetadata().getMappedClass(),
@@ -170,12 +174,14 @@ public class MutableLocalEntityProvider<T> extends LocalEntityProvider<T>
         }
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public T updateEntity(final T entity) {
         assert entity != null : "entity must not be null";
         final Object[] entityA = new Object[1];
         runInTransaction(new Runnable() {
 
+            @Override
             public void run() {
                 EntityManager em = getEntityManager();
                 entityA[0] = em.merge(entity);
@@ -187,6 +193,7 @@ public class MutableLocalEntityProvider<T> extends LocalEntityProvider<T>
         return dEntity;
     }
 
+    @Override
     @SuppressWarnings("unchecked")
     public void updateEntityProperty(final Object entityId,
             final String propertyName, final Object propertyValue)
@@ -196,6 +203,7 @@ public class MutableLocalEntityProvider<T> extends LocalEntityProvider<T>
         final Object[] entityA = new Object[1];
         runInTransaction(new Runnable() {
 
+            @Override
             public void run() {
                 EntityManager em = getEntityManager();
                 T entity = em.find(getEntityClassMetadata().getMappedClass(),
@@ -231,6 +239,7 @@ public class MutableLocalEntityProvider<T> extends LocalEntityProvider<T>
         return listeners;
     }
 
+    @Override
     public void addListener(EntityProviderChangeListener<T> listener) {
         synchronized (getListeners()) {
             assert listener != null : "listener must not be null";
@@ -239,6 +248,7 @@ public class MutableLocalEntityProvider<T> extends LocalEntityProvider<T>
         }
     }
 
+    @Override
     public void removeListener(EntityProviderChangeListener<T> listener) {
         synchronized (getListeners()) {
             assert listener != null : "listener must not be null";

@@ -45,10 +45,12 @@ public class BatchUpdatePerformedEvent<T> implements
         this.entityProvider = entityProvider;
     }
 
+    @Override
     public Collection<T> getAffectedEntities() {
         return Collections.emptyList();
     }
 
+    @Override
     public EntityProvider<T> getEntityProvider() {
         return entityProvider;
     }

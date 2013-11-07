@@ -63,6 +63,7 @@ public abstract class PropertyTranslator extends AbstractProperty implements
      * @return the current data source as a Property, or <code>null</code> if
      *         none defined.
      */
+    @Override
     public Property getPropertyDataSource() {
         return dataSource;
     }
@@ -73,6 +74,7 @@ public abstract class PropertyTranslator extends AbstractProperty implements
      * @param newDataSource
      *            the new data source Property.
      */
+    @Override
     public void setPropertyDataSource(Property newDataSource) {
 
         boolean readOnly = false;
@@ -116,6 +118,7 @@ public abstract class PropertyTranslator extends AbstractProperty implements
     }
 
     /* Documented in the interface */
+    @Override
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public Class getType() {
         return String.class;
@@ -126,6 +129,7 @@ public abstract class PropertyTranslator extends AbstractProperty implements
      * 
      * @return the translated value
      */
+    @Override
     public Object getValue() {
         Object value = dataSource == null ? null : dataSource.getValue();
         if (value == null) {
@@ -150,6 +154,7 @@ public abstract class PropertyTranslator extends AbstractProperty implements
     }
 
     /** Reflects the read-only status of the datasource. */
+    @Override
     public boolean isReadOnly() {
         return dataSource == null ? false : dataSource.isReadOnly();
     }
@@ -190,12 +195,14 @@ public abstract class PropertyTranslator extends AbstractProperty implements
      * @param newStatus
      *            the new read-only status of the Property.
      */
+    @Override
     public void setReadOnly(boolean newStatus) {
         if (dataSource != null) {
             dataSource.setReadOnly(newStatus);
         }
     }
 
+    @Override
     public void setValue(Object newValue) throws ReadOnlyException,
             ConversionException {
         if (dataSource == null) {
@@ -229,6 +236,7 @@ public abstract class PropertyTranslator extends AbstractProperty implements
      * 
      * This should not be called directly.
      */
+    @Override
     public void valueChange(com.vaadin.data.Property.ValueChangeEvent event) {
         fireValueChange();
     }
@@ -238,6 +246,7 @@ public abstract class PropertyTranslator extends AbstractProperty implements
      * 
      * This should not be called directly.
      */
+    @Override
     public void readOnlyStatusChange(
             com.vaadin.data.Property.ReadOnlyStatusChangeEvent event) {
         fireReadOnlyStatusChange();

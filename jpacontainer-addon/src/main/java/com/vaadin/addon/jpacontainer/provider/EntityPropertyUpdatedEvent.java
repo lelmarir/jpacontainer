@@ -36,6 +36,7 @@ class EntityPropertyUpdatedEvent<T> extends EntityEvent<T> implements
         this.propertyId = propertyId;
     }
 
+    @Override
     public String getPropertyId() {
         return propertyId;
     }

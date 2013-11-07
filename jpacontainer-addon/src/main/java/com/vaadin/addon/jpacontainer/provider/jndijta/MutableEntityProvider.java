@@ -59,10 +59,12 @@ public class MutableEntityProvider<T> extends MutableLocalEntityProvider<T>
         return Util.getEntityManager(getJndiAddresses());
     }
 
+    @Override
     public void setJndiAddresses(JndiAddresses addresses) {
         this.jndiAddresses = addresses;
     }
 
+    @Override
     public JndiAddresses getJndiAddresses() {
         if (jndiAddresses == null) {
             return JndiAddresses.DEFAULTS;

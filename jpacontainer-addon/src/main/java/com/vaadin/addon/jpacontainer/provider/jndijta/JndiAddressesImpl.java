@@ -31,10 +31,12 @@ public class JndiAddressesImpl implements JndiAddresses {
         this.entityManagerName = entityManagerName;
     }
 
+    @Override
     public String getUserTransactionName() {
         return userTransactionName;
     }
 
+    @Override
     public String getEntityManagerName() {
         return entityManagerName;
     }

@@ -68,10 +68,12 @@ public class FilterConverter {
      * Converts {@link And} filters.
      */
     private static class AndConverter implements Converter {
+        @Override
         public boolean canConvert(Filter filter) {
             return filter instanceof And;
         }
 
+        @Override
         public <X, Y> Predicate toPredicate(Filter filter, CriteriaBuilder cb,
                 From<X, Y> root) {
             return cb.and(convertFiltersToArray(((And) filter).getFilters(),
@@ -83,10 +85,12 @@ public class FilterConverter {
      * Converts {@link Or} filters.
      */
     private static class OrConverter implements Converter {
+        @Override
         public boolean canConvert(Filter filter) {
             return filter instanceof Or;
         }
 
+        @Override
         public <X, Y> Predicate toPredicate(Filter filter, CriteriaBuilder cb,
                 From<X, Y> root) {
             return cb.or(convertFiltersToArray(((Or) filter).getFilters(), cb,
@@ -98,10 +102,12 @@ public class FilterConverter {
      * Converts {@link Compare} filters ({@link Equal}, {@link Greater}, etc).
      */
     private static class CompareConverter implements Converter {
+        @Override
         public boolean canConvert(Filter filter) {
             return filter instanceof Compare;
         }
 
+        @Override
         @SuppressWarnings({ "rawtypes", "unchecked" })
         public <X, Y> Predicate toPredicate(Filter filter, CriteriaBuilder cb,
                 From<X, Y> root) {
@@ -136,10 +142,12 @@ public class FilterConverter {
      * Converts {@link IsNull} filters.
      */
     private static class IsNullConverter implements Converter {
+        @Override
         public boolean canConvert(Filter filter) {
             return filter instanceof IsNull;
         }
 
+        @Override
         public <X, Y> Predicate toPredicate(Filter filter, CriteriaBuilder cb,
                 From<X, Y> root) {
             return cb.isNull(AdvancedFilterableSupport.getPropertyPath(root,
@@ -151,10 +159,12 @@ public class FilterConverter {
      * Converts {@link SimpleStringFilter} filters.
      */
     private static class SimpleStringFilterConverter implements Converter {
+        @Override
         public boolean canConvert(Filter filter) {
             return filter instanceof SimpleStringFilter;
         }
 
+        @Override
         public <X, Y> Predicate toPredicate(Filter filter, CriteriaBuilder cb,
                 From<X, Y> root) {
             SimpleStringFilter stringFilter = (SimpleStringFilter) filter;
@@ -181,10 +191,12 @@ public class FilterConverter {
      * Converts {@link Like} filters.
      */
     private static class LikeConverter implements Converter {
+        @Override
         public boolean canConvert(Filter filter) {
             return filter instanceof Like;
         }
 
+        @Override
         public <X, Y> Predicate toPredicate(Filter filter, CriteriaBuilder cb,
                 From<X, Y> root) {
             Like like = (Like) filter;
@@ -202,10 +214,12 @@ public class FilterConverter {
     }
 
     private static class BetweenConverter implements Converter {
+        @Override
         public boolean canConvert(Filter filter) {
             return filter instanceof Between;
         }
 
+        @Override
         @SuppressWarnings({ "unchecked", "rawtypes" })
         public <X, Y> Predicate toPredicate(Filter filter, CriteriaBuilder cb,
                 From<X, Y> root) {
@@ -221,10 +235,12 @@ public class FilterConverter {
     }
 
     private static class JoinFilterConverter implements Converter {
+        @Override
         public boolean canConvert(Filter filter) {
             return filter instanceof JoinFilter;
         }
 
+        @Override
         public <X, Y> Predicate toPredicate(Filter filter, CriteriaBuilder cb,
                 From<X, Y> root) {
             JoinFilter hibernateJoin = (JoinFilter) filter;
@@ -236,10 +252,12 @@ public class FilterConverter {
     }
 
     private static class NotFilterConverter implements Converter {
+        @Override
         public boolean canConvert(Filter filter) {
             return filter instanceof Not;
         }
 
+        @Override
         public <X, Y> Predicate toPredicate(Filter filter, CriteriaBuilder cb,
                 From<X, Y> root) {
             Not not = (Not) filter;

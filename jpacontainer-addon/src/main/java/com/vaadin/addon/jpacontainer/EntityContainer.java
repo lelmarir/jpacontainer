@@ -134,6 +134,7 @@ public interface EntityContainer<T> extends Container, Container.Sortable,
     /**
      * {@inheritDoc }
      */
+    @Override
     public EntityItem<T> getItem(Object itemId);
 
     /**

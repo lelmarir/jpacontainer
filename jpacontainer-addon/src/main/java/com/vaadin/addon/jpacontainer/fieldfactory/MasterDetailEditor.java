@@ -156,6 +156,7 @@ public class MasterDetailEditor extends CustomField implements Action.Handler {
                 .getType();
     }
 
+    @Override
     public void handleAction(Action action, Object sender, Object target) {
         if (action == add) {
             addNew();
@@ -164,6 +165,7 @@ public class MasterDetailEditor extends CustomField implements Action.Handler {
         }
     }
 
+    @Override
     public Action[] getActions(Object target, Object sender) {
         return actions;
     }
@@ -248,12 +250,14 @@ public class MasterDetailEditor extends CustomField implements Action.Handler {
         CssLayout buttons = new CssLayout();
         buttons.addComponent(new Button(getMasterDetailAddItemCaption(),
                 new ClickListener() {
+                    @Override
                     public void buttonClick(ClickEvent event) {
                         addNew();
                     }
                 }));
         buttons.addComponent(new Button(getMasterDetailRemoveItemCaption(),
                 new ClickListener() {
+                    @Override
                     public void buttonClick(ClickEvent event) {
                         remove(getTable().getValue());
                     }
