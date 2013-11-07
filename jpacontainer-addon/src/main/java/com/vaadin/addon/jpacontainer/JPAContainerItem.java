@@ -17,21 +17,15 @@
 package com.vaadin.addon.jpacontainer;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.util.Collection;
-import java.util.EventObject;
 import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
-import com.vaadin.addon.jpacontainer.util.HibernateUtil;
 import com.vaadin.data.Container;
 import com.vaadin.data.Container.ItemSetChangeEvent;
 import com.vaadin.data.Property;
 import com.vaadin.data.Property.ValueChangeListener;
 import com.vaadin.data.Validator.InvalidValueException;
-import com.vaadin.data.util.converter.Converter.ConversionException;
 
 /**
  * {@link EntityItem}-implementation that is used by {@link JPAContainer}.
@@ -44,322 +38,10 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 
     private static final long serialVersionUID = 3835181888110236341L;
 
-    private static boolean nullSafeEquals(Object o1, Object o2) {
-        try {
-            return o1 == o2 || o1.equals(o2);
-        } catch (NullPointerException e) {
-            return false;
-        }
-    }
-
-    /**
-     * {@link Property}-implementation that is used by {@link EntityItem}.
-     * Should not be used directly by clients.
-     * 
-     * @author Petter Holmström (Vaadin Ltd)
-     * @since 1.0
-     */
-    final class ItemProperty implements EntityItemProperty {
-
-        private static final long serialVersionUID = 2791934277775480650L;
-        private String propertyId;
-        private Object cachedValue;
-
-        /**
-         * Creates a new <code>ItemProperty</code>.
-         * 
-         * @param propertyId
-         *            the property id of the new property (must not be null).
-         */
-        ItemProperty(String propertyId) {
-            assert propertyId != null : "propertyId must not be null";
-            this.propertyId = propertyId;
-
-            // Initialize cached value if necessary
-            if (!isWriteThrough()) {
-                cacheRealValue();
-            }
-        }
-
-        public String getPropertyId() {
-            return propertyId;
-        }
-
-        /**
-         * Like the name suggests, this method notifies the listeners if the
-         * cached value and real value are different.
-         */
-        void notifyListenersIfCacheAndRealValueDiffer() {
-            Object realValue = getRealValue();
-            if (!nullSafeEquals(realValue, cachedValue)) {
-                fireValueChangeEvent();
-            }
-        }
-
-        /**
-         * Caches the real value of the property.
-         */
-        void cacheRealValue() {
-            Object realValue = getRealValue();
-            cachedValue = realValue;
-        }
-
-        /**
-         * Clears the cached value, without notifying any listeners.
-         */
-        void clearCache() {
-            cachedValue = null;
-        }
-
-        /**
-         * <b>Note! This method assumes that write through is OFF!</b>
-         * <p>
-         * Sets the real value to the cached value. If read through is on, the
-         * listeners are also notified as the value will appear to have changed
-         * to them.
-         * <p>
-         * If the property is read only, nothing happens.
-         * 
-         * @throws ConversionException
-         *             if the real value could not be set for some reason.
-         */
-        void commit() throws ConversionException {
-            if (!isReadOnly()) {
-                try {
-                    setRealValue(cachedValue);
-                } catch (Exception e) {
-                    throw new ConversionException(e);
-                }
-            }
-        }
-
-        /**
-         * <b>Note! This method assumes that write through is OFF!</b>
-         * <p>
-         * Replaces the cached value with the real value. If read through is
-         * off, the listeners are also notified as the value will appera to have
-         * changed to them.
-         */
-        void discard() {
-            Object realValue = getRealValue();
-            if (!nullSafeEquals(realValue, cachedValue)) {
-                cacheRealValue();
-                fireValueChangeEvent();
-            } else {
-                cacheRealValue();
-            }
-        }
-
-        public EntityItem<?> getItem() {
-            return JPAContainerItem.this;
-        }
-
-        public Class<?> getType() {
-            return propertyList.getPropertyType(propertyId);
-        }
-
-        public Object getValue() {
-            if (isReadThrough() && isWriteThrough()) {
-                return getRealValue();
-            } else {
-                return cachedValue;
-            }
-        }
-
-        /**
-         * Gets the real value from the backend entity.
-         * 
-         * @return the real value.
-         */
-        private Object getRealValue() {
-            ensurePropertyLoaded(propertyId);
-            return propertyList.getPropertyValue(entity, propertyId);
-        }
-
-        @Override
-        public String toString() {
-            final Object value = getValue();
-            if (value == null) {
-                return null;
-            }
-            return value.toString();
-        }
-
-        public boolean isReadOnly() {
-            return !propertyList.isPropertyWritable(propertyId);
-        }
-
-        /**
-         * <strong>This functionality is not supported by this
-         * implementation.</strong>
-         * <p>
-         * {@inheritDoc }
-         */
-        public void setReadOnly(boolean newStatus) {
-            throw new UnsupportedOperationException(
-                    "The read only state cannot be changed");
-        }
-
-        /**
-         * Sets the real value of the property to <code>newValue</code>. The
-         * value is expected to be of the correct type at this point (i.e. any
-         * conversions from a String should have been done already). As this
-         * method updates the backend entity object, it also turns on the
-         * <code>dirty</code> flag of the item.
-         * 
-         * @see JPAContainerItem#isDirty()
-         * @param newValue
-         *            the new value to set.
-         */
-        private void setRealValue(Object newValue) {
-            ensurePropertyLoaded(propertyId);
-            propertyList.setPropertyValue(entity, propertyId, newValue);
-            dirty = true;
-        }
-
-        /**
-         * Ensures that any lazy loaded properties are available.
-         * 
-         * @param propertyId
-         *            the id of the property to check.
-         */
-        private void ensurePropertyLoaded(String propertyId) {
-            LazyLoadingDelegate lazyLoadingDelegate = getContainer()
-                    .getEntityProvider().getLazyLoadingDelegate();
-            if (lazyLoadingDelegate == null
-                    || !propertyList.isPropertyLazyLoaded(propertyId)) {
-                // Don't need to do anything
-                return;
-            }
-            boolean shouldLoadEntity = false;
-            try {
-                Object value = propertyList
-                        .getPropertyValue(entity, propertyId);
-                if (value != null) {
-                    shouldLoadEntity = HibernateUtil
-                            .isUninitializedAndUnattachedProxy(value);
-                    if (Collection.class.isAssignableFrom(propertyList
-                            .getPropertyType(propertyId))) {
-                        ((Collection<?>) value).iterator().hasNext();
-                    }
-                }
-            } catch (IllegalArgumentException e) {
-                shouldLoadEntity = true;
-            } catch (RuntimeException e) {
-                if (HibernateUtil.isLazyInitializationException(e)) {
-                    shouldLoadEntity = true;
-                } else {
-                    throw e;
-                }
-            }
-            if (shouldLoadEntity) {
-                entity = lazyLoadingDelegate.ensureLazyPropertyLoaded(entity,
-                        propertyId);
-            }
-        }
-
-        public void setValue(Object newValue) throws ReadOnlyException,
-                ConversionException {
-            if (isReadOnly()) {
-                throw new ReadOnlyException();
-            }
-
-            if (newValue != null
-                    && !getType().isAssignableFrom(newValue.getClass())) {
-                /*
-                 * The type we try to set is incompatible with the type of the
-                 * property. We therefore try to convert the value to a string
-                 * and see if there is a constructor that takes a single string
-                 * argument. If this fails, we throw an exception.
-                 */
-                try {
-                    // Gets the string constructor
-                    final Constructor<?> constr = getType().getConstructor(
-                            new Class[] { String.class });
-
-                    newValue = constr.newInstance(new Object[] { newValue
-                            .toString() });
-                } catch (Exception e) {
-                    throw new ConversionException(e);
-                }
-            }
-            try {
-                if (isWriteThrough()) {
-                    setRealValue(newValue);
-                    container.containerItemPropertyModified(
-                            JPAContainerItem.this, propertyId);
-                } else {
-                    cachedValue = newValue;
-                    modified = true;
-                }
-            } catch (Exception e) {
-                throw new ConversionException(e);
-            }
-            fireValueChangeEvent();
-        }
-
-        private List<ValueChangeListener> listeners;
-
-        private class ValueChangeEvent extends EventObject implements
-                Property.ValueChangeEvent {
-
-            private static final long serialVersionUID = 4999596001491426923L;
-
-            private ValueChangeEvent(ItemProperty source) {
-                super(source);
-            }
-
-            public Property getProperty() {
-                return (Property) getSource();
-            }
-        }
-
-        /**
-         * Notifies all the listeners that the value of the property has
-         * changed.
-         */
-        public void fireValueChangeEvent() {
-            if (listeners != null) {
-                final Object[] l = listeners.toArray();
-                final Property.ValueChangeEvent event = new ValueChangeEvent(
-                        this);
-                for (int i = 0; i < l.length; i++) {
-                    ((Property.ValueChangeListener) l[i]).valueChange(event);
-                }
-            }
-        }
-
-        public void addListener(ValueChangeListener listener) {
-            assert listener != null : "listener must not be null";
-            if (listeners == null) {
-                listeners = new LinkedList<ValueChangeListener>();
-            }
-            listeners.add(listener);
-        }
-
-        public void removeListener(ValueChangeListener listener) {
-            assert listener != null : "listener must not be null";
-            if (listeners != null) {
-                listeners.remove(listener);
-                if (listeners.isEmpty()) {
-                    listeners = null;
-                }
-            }
-        }
-
-        public void addValueChangeListener(ValueChangeListener listener) {
-            addListener(listener);
-        }
-
-        public void removeValueChangeListener(ValueChangeListener listener) {
-            removeListener(listener);
-        }
-    }
-
     private T entity;
     private JPAContainer<T> container;
     private PropertyList<T> propertyList;
-    private Map<Object, ItemProperty> propertyMap;
+    private Map<Object, JPAContainerItemProperty<T>> propertyMap;
     private boolean modified = false;
     private boolean dirty = false;
     private boolean persistent = true;
@@ -415,38 +97,74 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         } else {
             this.persistent = persistent;
         }
-        this.propertyMap = new HashMap<Object, ItemProperty>();
+        this.propertyMap = new HashMap<Object, JPAContainerItemProperty<T>>();
         container.registerItem(this);
     }
 
-    public Object getItemId() {
+    @Override
+	public Object getItemId() {
         return itemId;
     }
 
-    public boolean addItemProperty(Object id, Property property)
+    @Override
+    public boolean addItemProperty(Object id, @SuppressWarnings("rawtypes") Property property)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
-    public void addNestedContainerProperty(String nestedProperty)
+    @Override
+	public void addNestedContainerProperty(String nestedProperty)
             throws UnsupportedOperationException {
         propertyList.addNestedProperty(nestedProperty);
     }
 
-    public EntityItemProperty getItemProperty(Object id) {
+    @Override
+	public EntityItemProperty getItemProperty(Object id) {
         assert id != null : "id must not be null";
-        ItemProperty p = propertyMap.get(id);
+        JPAContainerItemProperty<T> p = propertyMap.get(id);
         if (p == null) {
             if (!getItemPropertyIds().contains(id.toString())) {
                 return null;
             }
-            p = new ItemProperty(id.toString());
+            p = new JPAContainerItemProperty<T>(this, id.toString());
             propertyMap.put(id, p);
         }
         return p;
     }
 
-    public Collection<String> getItemPropertyIds() {
+    //TODO: equivalente a getItemProperty().getType() ?
+    public Class<?> getItemPropertyType(String propertyName) {
+    	return propertyList.getPropertyType(propertyName);
+    }
+    
+    //TODO: equivalente a getItemProperty().getValue() ?
+    public Object getItemPropertyValue(String propertyName) {
+    	return propertyList.getPropertyValue(entity, propertyName);
+    }
+    
+    //TODO: equivalente a getItemProperty().isPropertyWriteable() ?
+    public boolean isItemPropertyWritable(String propertyName) {
+    	return propertyList.isPropertyWritable(propertyName);
+    }
+    
+    //TODO: equivalente a getItemProperty().setValue() ?
+    public void setItemPropertyValue(String propertyName,
+            Object propertyValue) throws IllegalArgumentException,
+            IllegalStateException {
+    	propertyList.setPropertyValue(entity, propertyName, propertyValue);
+    	dirty = true;
+    }
+    
+    void containerItemPropertyModified(String propertyId) {
+    	container.containerItemPropertyModified(this, propertyId);
+    }
+    
+    public boolean isItemPropertyLazyLoaded(String propertyName) {
+    	return propertyList.isPropertyLazyLoaded(propertyName);
+    }
+
+    @Override
+	public Collection<String> getItemPropertyIds() {
         /*
          * Although the container may only contain a few properties, all
          * properties are available for items.
@@ -454,7 +172,8 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         return propertyList.getAllAvailablePropertyNames();
     }
 
-    public boolean removeItemProperty(Object id)
+    @Override
+	public boolean removeItemProperty(Object id)
             throws UnsupportedOperationException {
         assert id != null : "id must not be null";
         if (id.toString().indexOf('.') > -1) {
@@ -464,8 +183,13 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         }
     }
 
-    public boolean isModified() {
+    @Override
+	public boolean isModified() {
         return modified;
+    }
+
+    public void setModified(boolean modified) {
+    	this.modified = modified;
     }
 
     /**
@@ -479,11 +203,13 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         this.dirty = dirty;
     }
 
-    public boolean isDirty() {
+    @Override
+	public boolean isDirty() {
         return isPersistent() && dirty;
     }
 
-    public boolean isPersistent() {
+    @Override
+	public boolean isPersistent() {
         return persistent;
     }
 
@@ -499,7 +225,8 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         this.persistent = persistent;
     }
 
-    public boolean isDeleted() {
+    @Override
+	public boolean isDeleted() {
         return isPersistent() && !getContainer().isBuffered() && deleted;
     }
 
@@ -515,22 +242,29 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         this.deleted = true;
     }
 
-    public EntityContainer<T> getContainer() {
+    @Override
+	public EntityContainer<T> getContainer() {
         return container;
     }
 
-    public T getEntity() {
-        return entity;
+    @Override
+	public T getEntity() {
+        return this.entity;
+    }
+    
+    public void replaceEntity(T entity) {
+    	this.entity = entity;
     }
 
-    public void commit() throws SourceException, InvalidValueException {
+    @Override
+	public void commit() throws SourceException, InvalidValueException {
         if (!isWriteThrough()) {
             try {
                 /*
                  * Commit all properties. The commit() operation will check if
                  * the property is read only and ignore it if that is the case.
                  */
-                for (ItemProperty prop : propertyMap.values()) {
+                for (JPAContainerItemProperty<T> prop : propertyMap.values()) {
                     prop.commit();
                 }
                 modified = false;
@@ -541,9 +275,10 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         }
     }
 
-    public void discard() throws SourceException {
+    @Override
+	public void discard() throws SourceException {
         if (!isWriteThrough()) {
-            for (ItemProperty prop : propertyMap.values()) {
+            for (JPAContainerItemProperty<T> prop : propertyMap.values()) {
                 prop.discard();
             }
             modified = false;
@@ -580,7 +315,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
                 /*
                  * Do some cleaning up
                  */
-                for (ItemProperty prop : propertyMap.values()) {
+                for (JPAContainerItemProperty<T> prop : propertyMap.values()) {
                     prop.clearCache();
                 }
             } else {
@@ -589,7 +324,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
                  * affects existing properties. Properties that are lazily
                  * created afterwards will work automatically.
                  */
-                for (ItemProperty prop : propertyMap.values()) {
+                for (JPAContainerItemProperty<T> prop : propertyMap.values()) {
                     prop.cacheRealValue();
                 }
             }
@@ -597,7 +332,8 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         }
     }
 
-    public void addListener(ValueChangeListener listener) {
+    @Override
+	public void addListener(ValueChangeListener listener) {
         /*
          * This operation affects ALL properties, so we have to iterate over the
          * list of ids instead of the map.
@@ -608,7 +344,8 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         }
     }
 
-    public void removeListener(ValueChangeListener listener) {
+    @Override
+	public void removeListener(ValueChangeListener listener) {
         /*
          * This operation affects ALL properties, so we have to iterate over the
          * list of ids instead of the map.
@@ -619,11 +356,13 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         }
     }
 
-    public void addValueChangeListener(ValueChangeListener listener) {
+    @Override
+	public void addValueChangeListener(ValueChangeListener listener) {
         addListener(listener);
     }
 
-    public void removeValueChangeListener(ValueChangeListener listener) {
+    @Override
+	public void removeValueChangeListener(ValueChangeListener listener) {
         removeListener(listener);
     }
 
@@ -632,11 +371,12 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         return entity.toString();
     }
 
-    @SuppressWarnings("serial")
+    @Override
+	@SuppressWarnings("serial")
     public void refresh() {
         if (isPersistent()) {
             T refreshedEntity = getContainer().getEntityProvider()
-                    .refreshEntity(entity);
+                    .refreshEntity(getEntity());
             if (refreshedEntity == null) {
                 /*
                  * Entity has been removed, fire item set change for the
@@ -644,13 +384,14 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
                  */
                 setPersistent(false);
                 container.fireContainerItemSetChange(new ItemSetChangeEvent() {
-                    public Container getContainer() {
+                    @Override
+					public Container getContainer() {
                         return container;
                     }
                 });
                 return;
             } else {
-                entity = refreshedEntity;
+                replaceEntity(refreshedEntity);
             }
             if (isDirty()) {
                 discard();
@@ -668,12 +409,14 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         container.registerItem(this);
     }
 
-    public void setBuffered(boolean buffered) {
+    @Override
+	public void setBuffered(boolean buffered) {
         setWriteThrough(!buffered);
         setReadThrough(!buffered);
     }
 
-    public boolean isBuffered() {
+    @Override
+	public boolean isBuffered() {
         return !isReadThrough() && !isWriteThrough();
     }
 }

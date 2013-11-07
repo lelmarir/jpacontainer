@@ -175,7 +175,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
 
                     private static final long serialVersionUID = -23196201919497112L;
 
-                    public void filtersApplied(AdvancedFilterableSupport sender) {
+                    @Override
+					public void filtersApplied(AdvancedFilterableSupport sender) {
                         fireContainerItemSetChange(new FiltersAppliedEvent<JPAContainer<T>>(
                                 JPAContainer.this));
                     }
@@ -227,7 +228,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         return entityClassMetadata;
     }
 
-    public void addListener(ItemSetChangeListener listener) {
+    @Override
+	public void addListener(ItemSetChangeListener listener) {
         if (listener == null) {
             return;
         }
@@ -237,7 +239,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         listeners.add(listener);
     }
 
-    public void removeListener(ItemSetChangeListener listener) {
+    @Override
+	public void removeListener(ItemSetChangeListener listener) {
         if (listener != null && listeners != null) {
             listeners.remove(listener);
         }
@@ -286,17 +289,20 @@ public class JPAContainer<T> implements EntityContainer<T>,
         return fireContainerItemSetChangeEvents;
     }
 
-    public void addNestedContainerProperty(String nestedProperty)
+    @Override
+	public void addNestedContainerProperty(String nestedProperty)
             throws UnsupportedOperationException {
         propertyList.addNestedProperty(nestedProperty);
         updateFilterablePropertyIds();
     }
 
-    public Class<T> getEntityClass() {
+    @Override
+	public Class<T> getEntityClass() {
         return getEntityClassMetadata().getMappedClass();
     }
 
-    public EntityProvider<T> getEntityProvider() {
+    @Override
+	public EntityProvider<T> getEntityProvider() {
         return entityProvider;
     }
 
@@ -315,12 +321,14 @@ public class JPAContainer<T> implements EntityContainer<T>,
         return entityProvider;
     }
 
-    public boolean isReadOnly() {
+    @Override
+	public boolean isReadOnly() {
         return !(doGetEntityProvider() instanceof MutableEntityProvider)
                 || readOnly;
     }
 
-    @SuppressWarnings("unchecked")
+    @Override
+	@SuppressWarnings("unchecked")
     public void setEntityProvider(EntityProvider<T> entityProvider) {
         assert entityProvider != null : "entityProvider must not be null";
         // Remove listener from old provider
@@ -375,7 +383,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         return fireItemSetChangeOnProviderChange;
     }
 
-    public void entityProviderChange(EntityProviderChangeEvent<T> event) {
+    @Override
+	public void entityProviderChange(EntityProviderChangeEvent<T> event) {
         if (isItemSetChangeEvent(event)
                 && isFireItemSetChangeOnProviderChange()) {
             fireContainerItemSetChange(new ProviderChangedEvent(event));
@@ -436,7 +445,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         return true;
     }
 
-    public void setReadOnly(boolean readOnly)
+    @Override
+	public void setReadOnly(boolean readOnly)
             throws UnsupportedOperationException {
         if (readOnly) {
             this.readOnly = readOnly;
@@ -487,13 +497,15 @@ public class JPAContainer<T> implements EntityContainer<T>,
         propertyList.setSortProperty(propertyId, sortProperty);
     }
 
-    public Collection<String> getSortableContainerPropertyIds() {
+    @Override
+	public Collection<String> getSortableContainerPropertyIds() {
         // This includes properties for which a separate sort property has been
         // defined.
         return propertyList.getSortablePropertyMap().keySet();
     }
 
-    public void sort(Object[] propertyId, boolean[] ascending) {
+    @Override
+	public void sort(Object[] propertyId, boolean[] ascending) {
         assert propertyId != null : "propertyId must not be null";
         assert ascending != null : "ascending must not be null";
         assert propertyId.length == ascending.length : "propertyId and ascending must have the same length";
@@ -533,7 +545,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * <p>
      * {@inheritDoc }
      */
-    public Object addItemAfter(Object previousItemId)
+    @Override
+	public Object addItemAfter(Object previousItemId)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
@@ -544,12 +557,14 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * <p>
      * {@inheritDoc }
      */
-    public Item addItemAfter(Object previousItemId, Object newItemId)
+    @Override
+	public Item addItemAfter(Object previousItemId, Object newItemId)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
-    public Object firstItemId() {
+    @Override
+	public Object firstItemId() {
         if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()) {
             Object itemId = doGetEntityProvider().getFirstEntityIdentifier(
                     this, getAppliedFiltersAsConjunction(), getSortByList());
@@ -563,17 +578,20 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public boolean isFirstId(Object itemId) {
+    @Override
+	public boolean isFirstId(Object itemId) {
         assert itemId != null : "itemId must not be null";
         return itemId.equals(firstItemId());
     }
 
-    public boolean isLastId(Object itemId) {
+    @Override
+	public boolean isLastId(Object itemId) {
         assert itemId != null : "itemId must not be null";
         return itemId.equals(lastItemId());
     }
 
-    public Object lastItemId() {
+    @Override
+	public Object lastItemId() {
         Object itemId = doGetEntityProvider().getLastEntityIdentifier(this,
                 getAppliedFiltersAsConjunction(), getSortByList());
         if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()) {
@@ -588,7 +606,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public Object nextItemId(Object itemId) {
+    @Override
+	public Object nextItemId(Object itemId) {
         // Note, we do not check if given itemId is deleted as we use this
         // method recursively to get itemId that is not deleted
         if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()
@@ -617,7 +636,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public Object prevItemId(Object itemId) {
+    @Override
+	public Object prevItemId(Object itemId) {
         // Note, we do not check if given itemId is deleted as we use this
         // method recursively to get itemId that is not deleted
         if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()) {
@@ -661,7 +681,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * <p>
      * {@inheritDoc }
      */
-    public boolean addContainerProperty(Object propertyId, Class<?> type,
+    @Override
+	public boolean addContainerProperty(Object propertyId, Class<?> type,
             Object defaultValue) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
@@ -672,7 +693,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * <p>
      * {@inheritDoc }
      */
-    public Item addItem(Object itemId) throws UnsupportedOperationException {
+    @Override
+	public Item addItem(Object itemId) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -685,7 +707,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * <p>
      * {@inheritDoc }
      */
-    public Object addItem() throws UnsupportedOperationException {
+    @Override
+	public Object addItem() throws UnsupportedOperationException {
         try {
             T newInstance = getEntityClass().newInstance();
             Object id = addEntity(newInstance);
@@ -696,7 +719,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         throw new UnsupportedOperationException();
     }
 
-    public boolean containsId(Object itemId) {
+    @Override
+	public boolean containsId(Object itemId) {
         boolean result = doContainsId(itemId);
         if (containsIdFiresItemSetChangeIfNotFound && !result) {
             fireContainerItemSetChange(new ItemNotFoundEvent());
@@ -752,12 +776,14 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public Property getContainerProperty(Object itemId, Object propertyId) {
+    @Override
+	public Property getContainerProperty(Object itemId, Object propertyId) {
         Item item = getItem(itemId);
         return item == null ? null : item.getItemProperty(propertyId);
     }
 
-    public Collection<String> getContainerPropertyIds() {
+    @Override
+	public Collection<String> getContainerPropertyIds() {
         return propertyList.getPropertyNames();
     }
 
@@ -782,7 +808,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * same {@link EntityItem} instance. The actual entity instance may still be
      * the same though, depending on the implementation of the entity provider.
      */
-    public EntityItem<T> getItem(Object itemId) {
+    @Override
+	public EntityItem<T> getItem(Object itemId) {
         if (itemId == null) {
             return null;
         }
@@ -877,7 +904,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * <p>
      * {@inheritDoc }
      */
-    public Collection<Object> getItemIds() {
+    @Override
+	public Collection<Object> getItemIds() {
         Collection<Object> ids = getEntityProvider().getAllEntityIdentifiers(
                 this, getAppliedFiltersAsConjunction(), getSortByList());
         if (isWriteThrough() || !bufferingDelegate.isModified()) {
@@ -891,16 +919,19 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public EntityItem<T> createEntityItem(T entity) {
+    @Override
+	public EntityItem<T> createEntityItem(T entity) {
         return new JPAContainerItem<T>(this, entity, null, false);
     }
 
-    public Class<?> getType(Object propertyId) {
+    @Override
+	public Class<?> getType(Object propertyId) {
         assert propertyId != null : "propertyId must not be null";
         return propertyList.getPropertyType(propertyId.toString());
     }
 
-    public boolean removeContainerProperty(Object propertyId)
+    @Override
+	public boolean removeContainerProperty(Object propertyId)
             throws UnsupportedOperationException {
         assert propertyId != null : "propertyId must not be null";
         boolean result = propertyList.removeProperty(propertyId.toString());
@@ -908,7 +939,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         return result;
     }
 
-    public int size() {
+    @Override
+	public int size() {
         int origSize = doGetEntityProvider().getEntityCount(this,
                 getAppliedFiltersAsConjunction());
         if (isWriteThrough()) {
@@ -939,39 +971,48 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public Collection<Object> getFilterablePropertyIds() {
+    @Override
+	public Collection<Object> getFilterablePropertyIds() {
         return filterSupport.getFilterablePropertyIds();
     }
 
-    public boolean isFilterable(Object propertyId) {
+    @Override
+	public boolean isFilterable(Object propertyId) {
         return filterSupport.isFilterable(propertyId);
     }
 
-    public List<Filter> getFilters() {
+    @Override
+	public List<Filter> getFilters() {
         return filterSupport.getFilters();
     }
 
-    public List<Filter> getAppliedFilters() {
+    @Override
+	public List<Filter> getAppliedFilters() {
         return filterSupport.getAppliedFilters();
     }
 
-    public void setApplyFiltersImmediately(boolean applyFiltersImmediately) {
+    @Override
+	public void setApplyFiltersImmediately(boolean applyFiltersImmediately) {
         filterSupport.setApplyFiltersImmediately(applyFiltersImmediately);
     }
 
-    public boolean isApplyFiltersImmediately() {
+    @Override
+	public boolean isApplyFiltersImmediately() {
         return filterSupport.isApplyFiltersImmediately();
     }
 
-    public void applyFilters() {
+    @Override
+	public void applyFilters() {
         filterSupport.applyFilters();
     }
 
-    public boolean hasUnappliedFilters() {
+    @Override
+	public boolean hasUnappliedFilters() {
         return filterSupport.hasUnappliedFilters();
     }
 
-    public void addContainerFilter(Object propertyId, String filterString,
+    @Override
+	public void addContainerFilter(Object propertyId, String filterString,
             boolean ignoreCase, boolean onlyMatchPrefix) {
         addContainerFilter(new SimpleStringFilter(propertyId, filterString,
                 ignoreCase, onlyMatchPrefix));
@@ -980,11 +1021,13 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public void removeAllContainerFilters() {
+    @Override
+	public void removeAllContainerFilters() {
         filterSupport.removeAllFilters();
     }
 
-    public void removeContainerFilters(Object propertyId) {
+    @Override
+	public void removeContainerFilters(Object propertyId) {
         removeAllContainerFilters();
         applyFilters();
     }
@@ -1001,12 +1044,14 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * 
      * @see com.vaadin.data.Container.Filterable#addContainerFilter(com.vaadin.data.Container.Filter)
      */
-    public void addContainerFilter(Filter filter)
+    @Override
+	public void addContainerFilter(Filter filter)
             throws UnsupportedFilterException {
         filterSupport.addFilter(filter);
     }
 
-    public void removeContainerFilter(Filter filter) {
+    @Override
+	public void removeContainerFilter(Filter filter) {
         filterSupport.removeFilter(filter);
     }
 
@@ -1016,7 +1061,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * <p>
      * {@inheritDoc }
      */
-    public Object addItemAt(int index) throws UnsupportedOperationException {
+    @Override
+	public Object addItemAt(int index) throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
@@ -1026,12 +1072,14 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * <p>
      * {@inheritDoc }
      */
-    public Item addItemAt(int index, Object newItemId)
+    @Override
+	public Item addItemAt(int index, Object newItemId)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
 
-    public Object getIdByIndex(int index) {
+    @Override
+	public Object getIdByIndex(int index) {
         if (isWriteThrough()) {
             return doGetEntityProvider().getEntityIdentifierAt(this,
                     getAppliedFiltersAsConjunction(), getSortByList(), index);
@@ -1057,7 +1105,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * <p>
      * {@inheritDoc }
      */
-    public int indexOfId(Object itemId) {
+    @Override
+	public int indexOfId(Object itemId) {
         /*
          * This is intentionally an ugly implementation! This method should not
          * be used!
@@ -1103,7 +1152,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public Object addEntity(T entity) throws UnsupportedOperationException,
+    @Override
+	public Object addEntity(T entity) throws UnsupportedOperationException,
             IllegalStateException {
         assert entity != null : "entity must not be null";
         requireWritableContainer();
@@ -1134,7 +1184,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * <p>
      * {@inheritDoc }
      */
-    public boolean removeAllItems() {
+    @Override
+	public boolean removeAllItems() {
         try {
             Collection<Object> itemIds = getItemIds();
             for (Object id : itemIds) {
@@ -1149,7 +1200,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         return true;
     }
 
-    public boolean removeItem(Object itemId)
+    @Override
+	public boolean removeItem(Object itemId)
             throws UnsupportedOperationException {
         assert itemId != null : "itemId must not be null";
         requireWritableContainer();
@@ -1267,7 +1319,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public void commit() throws SourceException, InvalidValueException {
+    @Override
+	public void commit() throws SourceException, InvalidValueException {
         if (!isWriteThrough() && isModified()) {
             bufferingDelegate.commit();
             setFireItemSetChangeOnProviderChange(false);
@@ -1279,7 +1332,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public void discard() throws SourceException {
+    @Override
+	public void discard() throws SourceException {
         if (!isWriteThrough() && isModified()) {
             bufferingDelegate.discard();
             setFireItemSetChangeOnProviderChange(false);
@@ -1291,7 +1345,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public boolean isModified() {
+    @Override
+	public boolean isModified() {
         if (isWriteThrough()) {
             return false;
         } else {
@@ -1343,12 +1398,14 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public void setAutoCommit(boolean autoCommit) throws SourceException,
+    @Override
+	public void setAutoCommit(boolean autoCommit) throws SourceException,
             InvalidValueException {
         setWriteThrough(autoCommit);
     }
 
-    public boolean isAutoCommit() {
+    @Override
+	public boolean isAutoCommit() {
         return isWriteThrough();
     }
 
@@ -1356,11 +1413,13 @@ public class JPAContainer<T> implements EntityContainer<T>,
 
     private String parentIdProperty;
 
-    public String getParentProperty() {
+    @Override
+	public String getParentProperty() {
         return parentProperty;
     }
 
-    public void setParentProperty(String parentProperty) {
+    @Override
+	public void setParentProperty(String parentProperty) {
         this.parentProperty = parentProperty;
         if (parentProperty == null) {
             parentIdProperty = null;
@@ -1373,7 +1432,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public boolean areChildrenAllowed(Object itemId) {
+    @Override
+	public boolean areChildrenAllowed(Object itemId) {
         assert itemId != null : "itemId must not be null";
         return parentProperty != null && containsId(itemId);
     }
@@ -1393,7 +1453,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public Collection<?> getChildren(Object itemId) {
+    @Override
+	public Collection<?> getChildren(Object itemId) {
         if (getParentProperty() == null) {
             if (itemId == null) {
                 return getItemIds();
@@ -1406,7 +1467,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public Object getParent(Object itemId) {
+    @Override
+	public Object getParent(Object itemId) {
         if (parentProperty == null) {
             return null;
         } else {
@@ -1425,15 +1487,18 @@ public class JPAContainer<T> implements EntityContainer<T>,
         }
     }
 
-    public boolean hasChildren(Object itemId) {
+    @Override
+	public boolean hasChildren(Object itemId) {
         return !getChildren(itemId).isEmpty();
     }
 
-    public boolean isRoot(Object itemId) {
+    @Override
+	public boolean isRoot(Object itemId) {
         return getParent(itemId) == null;
     }
 
-    public Collection<?> rootItemIds() {
+    @Override
+	public Collection<?> rootItemIds() {
         return getChildren(null);
     }
 
@@ -1443,7 +1508,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * <p>
      * {@inheritDoc }
      */
-    public boolean setChildrenAllowed(Object itemId, boolean areChildrenAllowed)
+    @Override
+	public boolean setChildrenAllowed(Object itemId, boolean areChildrenAllowed)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
@@ -1454,7 +1520,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * <p>
      * {@inheritDoc }
      */
-    public boolean setParent(Object itemId, Object newParentId)
+    @Override
+	public boolean setParent(Object itemId, Object newParentId)
             throws UnsupportedOperationException {
         throw new UnsupportedOperationException();
     }
@@ -1472,7 +1539,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         protected ContainerSortedEvent() {
         }
 
-        public Container getContainer() {
+        @Override
+		public Container getContainer() {
             return JPAContainer.this;
         }
     }
@@ -1492,7 +1560,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         protected ChangesCommittedEvent() {
         }
 
-        public Container getContainer() {
+        @Override
+		public Container getContainer() {
             return JPAContainer.this;
         }
     }
@@ -1512,7 +1581,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         protected ChangesDiscardedEvent() {
         }
 
-        public Container getContainer() {
+        @Override
+		public Container getContainer() {
             return JPAContainer.this;
         }
     }
@@ -1531,7 +1601,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         protected AllItemsRemovedEvent() {
         }
 
-        public Container getContainer() {
+        @Override
+		public Container getContainer() {
             return JPAContainer.this;
         }
     }
@@ -1551,7 +1622,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         protected ItemNotFoundEvent() {
         }
 
-        public Container getContainer() {
+        @Override
+		public Container getContainer() {
             return JPAContainer.this;
         }
     }
@@ -1572,7 +1644,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
             this.event = event;
         }
 
-        public Container getContainer() {
+        @Override
+		public Container getContainer() {
             return JPAContainer.this;
         }
 
@@ -1600,7 +1673,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
             this.itemId = itemId;
         }
 
-        public Container getContainer() {
+        @Override
+		public Container getContainer() {
             return JPAContainer.this;
         }
 
@@ -1668,17 +1742,20 @@ public class JPAContainer<T> implements EntityContainer<T>,
         protected AllItemsRefreshedEvent() {
         }
 
-        public Container getContainer() {
+        @Override
+		public Container getContainer() {
             return JPAContainer.this;
         }
     }
 
-    public PropertyKind getPropertyKind(Object propertyId) {
+    @Override
+	public PropertyKind getPropertyKind(Object propertyId) {
         assert propertyId != null : "propertyId must not be null";
         return propertyList.getPropertyKind(propertyId.toString());
     }
 
-    @SuppressWarnings("unchecked")
+    @Override
+	@SuppressWarnings("unchecked")
     public void refreshItem(Object itemId) {
         LinkedList<WeakReference<JPAContainerItem<T>>> linkedList = null;
         synchronized (getItemRegistry()) {
@@ -1704,7 +1781,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * 
      * @see com.vaadin.addon.jpacontainer.EntityContainer#refresh()
      */
-    public void refresh() {
+    @Override
+	public void refresh() {
         doGetEntityProvider().refresh();
         bufferingDelegate.discard();
         synchronized (getItemRegistry()) {
@@ -1715,7 +1793,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
         fireContainerItemSetChange(new AllItemsRefreshedEvent());
     }
 
-    public QueryModifierDelegate getQueryModifierDelegate() {
+    @Override
+	public QueryModifierDelegate getQueryModifierDelegate() {
         return queryModifierDelegate;
     }
 
@@ -1731,25 +1810,30 @@ public class JPAContainer<T> implements EntityContainer<T>,
         this.queryModifierDelegate = queryModifierDelegate;
     }
 
-    public void setBuffered(boolean buffered) {
+    @Override
+	public void setBuffered(boolean buffered) {
         // setReadThrough is an unsupported operation, so just set write
         // through.
         setWriteThrough(!buffered);
     }
 
-    public boolean isBuffered() {
+    @Override
+	public boolean isBuffered() {
         return !isReadThrough() && isWriteThrough();
     }
 
-    public void addItemSetChangeListener(ItemSetChangeListener listener) {
+    @Override
+	public void addItemSetChangeListener(ItemSetChangeListener listener) {
         addListener(listener);
     }
 
-    public void removeItemSetChangeListener(ItemSetChangeListener listener) {
+    @Override
+	public void removeItemSetChangeListener(ItemSetChangeListener listener) {
         removeListener(listener);
     }
 
-    public List<?> getItemIds(int startIndex, int numberOfItems) {
+    @Override
+	public List<?> getItemIds(int startIndex, int numberOfItems) {
         // FIXME this should be optimized
         ArrayList<Object> ids = new ArrayList<Object>();
         for (int i = 0; i < numberOfItems; i++) {
