@@ -853,16 +853,19 @@ public class JPAContainer<T> implements EntityContainer<T>,
      */
     void registerItem(JPAContainerItem<T> item) {
         // TODO write tests to ensure the registry gets cleaned up properly
-        synchronized (getItemRegistry()) {
-            doItemRegistryCleanup();
-            LinkedList<WeakReference<JPAContainerItem<T>>> listOfItemsForEntity = itemRegistry
-                    .get(item.getItemId());
-            if (listOfItemsForEntity == null) {
-                listOfItemsForEntity = new LinkedList<WeakReference<JPAContainerItem<T>>>();
-                getItemRegistry().put(item.getItemId(), listOfItemsForEntity);
-            }
-            listOfItemsForEntity.add(new WeakReference<JPAContainerItem<T>>(
-                    item));
+		if (item.getItemId() != null) {
+			synchronized (getItemRegistry()) {
+	            doItemRegistryCleanup();
+	            LinkedList<WeakReference<JPAContainerItem<T>>> listOfItemsForEntity = getItemRegistry()
+	                    .get(item.getItemId());
+	            if (listOfItemsForEntity == null) {
+	                listOfItemsForEntity = new LinkedList<WeakReference<JPAContainerItem<T>>>();
+						getItemRegistry().put(item.getItemId(),
+								listOfItemsForEntity);
+	            }
+				listOfItemsForEntity
+							.add(new WeakReference<JPAContainerItem<T>>(item));
+			}
         }
     }
 
@@ -1844,6 +1847,6 @@ public class JPAContainer<T> implements EntityContainer<T>,
 
     @Override
     public Collection<Filter> getContainerFilters() {
-        return filterSupport.getAppliedFilters();
+        return getFilters();
     }
 }
