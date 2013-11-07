@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.logging.Logger;
 
 import com.vaadin.addon.jpacontainer.EntityProviderChangeEvent.EntityPropertyUpdatedEvent;
@@ -135,6 +136,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
      * entities) is performed.
      */
     private static final int CLEANUPRATE = 200;
+	private static final int MAX_NESTED_COMMITS = 5;
     private EntityProvider<T> entityProvider;
     private AdvancedFilterableSupport filterSupport;
     private LinkedList<ItemSetChangeListener> listeners;
@@ -143,7 +145,11 @@ public class JPAContainer<T> implements EntityContainer<T>,
     private PropertyList<T> propertyList;
     private BufferedContainerDelegate<T> bufferingDelegate;
     private boolean readOnly = false;
-    private boolean writeThrough = false;
+	private LinkedList<Boolean> writeThrough = new LinkedList<Boolean>() {
+		{
+			push(false);
+		}
+	};
 
     transient private HashMap<Object, LinkedList<WeakReference<JPAContainerItem<T>>>> itemRegistry;
 
@@ -879,21 +885,24 @@ public class JPAContainer<T> implements EntityContainer<T>,
     private void doItemRegistryCleanup() {
         final boolean cleanup = (cleanupCount++) % CLEANUPRATE == 0;
         if (cleanup) {
-            HashMap<Object, LinkedList<WeakReference<JPAContainerItem<T>>>> itemRegistry = getItemRegistry();
-            for (Iterator<Object> idIterator = itemRegistry.keySet().iterator(); idIterator
-                    .hasNext();) {
-                Object id = idIterator.next();
-                LinkedList<WeakReference<JPAContainerItem<T>>> linkedList = itemRegistry
-                        .get(id);
-                for (Iterator<WeakReference<JPAContainerItem<T>>> iterator = linkedList
-                        .iterator(); iterator.hasNext();) {
-                    WeakReference<JPAContainerItem<T>> ref = iterator.next();
+			Iterator<Entry<Object, LinkedList<WeakReference<JPAContainerItem<T>>>>> entryIterator = getItemRegistry()
+					.entrySet().iterator();
+			while (entryIterator.hasNext()) {
+				Entry<Object, LinkedList<WeakReference<JPAContainerItem<T>>>> entry = entryIterator
+						.next();
+				Object id = entry.getKey();
+				LinkedList<WeakReference<JPAContainerItem<T>>> linkedList = entry
+						.getValue();
+				for (Iterator<WeakReference<JPAContainerItem<T>>> itemsIterator = linkedList
+						.iterator(); itemsIterator.hasNext();) {
+					WeakReference<JPAContainerItem<T>> ref = itemsIterator
+							.next();
                     if (ref.get() == null) {
-                        iterator.remove();
+						itemsIterator.remove();
                     }
                 }
                 if (linkedList.isEmpty()) {
-                    idIterator.remove();
+					entryIterator.remove();
                 }
             }
         }
@@ -1328,6 +1337,12 @@ public class JPAContainer<T> implements EntityContainer<T>,
     @Override
 	public void commit() throws SourceException, InvalidValueException {
         if (!isWriteThrough() && isModified()) {
+			if (writeThrough.size() > MAX_NESTED_COMMITS) {
+				throw new IllegalStateException(
+						"commit() has been called recursively 5 time within commit execution");
+			}
+			writeThrough.push(true);
+			try {
             bufferingDelegate.commit();
             setFireItemSetChangeOnProviderChange(false);
             try {
@@ -1335,8 +1350,16 @@ public class JPAContainer<T> implements EntityContainer<T>,
             } finally {
                 setFireItemSetChangeOnProviderChange(true);
             }
+			} finally {
+				boolean wt = writeThrough.pop();
+				if (wt != true) {
+					throw new IllegalStateException(
+							"During a commit writeThrough is true and now (at the end of the commit) it is false,"
+									+ " so someone has modified it without returning it to false");
         }
     }
+		}
+	}
 
     @Override
 	public void discard() throws SourceException {
@@ -1370,7 +1393,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 
     public boolean isWriteThrough() {
         return !(doGetEntityProvider() instanceof BatchableEntityProvider)
-                || writeThrough;
+				|| writeThrough.peek();
     }
 
     /**
@@ -1391,12 +1414,18 @@ public class JPAContainer<T> implements EntityContainer<T>,
      */
     public void setWriteThrough(boolean writeThrough) throws SourceException,
             InvalidValueException {
+		if (isWriteThrough() == writeThrough) {
+			return;
+		}
+
         if (writeThrough) {
             commit();
-            this.writeThrough = writeThrough;
+			this.writeThrough.pop();
+			this.writeThrough.push(true);
         } else {
             if (doGetEntityProvider() instanceof BatchableEntityProvider) {
-                this.writeThrough = writeThrough;
+				this.writeThrough.pop();
+				this.writeThrough.push(false);
             } else {
                 throw new UnsupportedOperationException(
                         "EntityProvider is not batchable");
