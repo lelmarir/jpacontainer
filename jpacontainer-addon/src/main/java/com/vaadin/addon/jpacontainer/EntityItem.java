@@ -100,6 +100,12 @@ public interface EntityItem<T> extends Item, Buffered,
     public boolean isDirty();
 
     /**
+	 * Tell the EntityItem that the underlayng entity has been manually modified
+	 * (through {@link #getEntity()}) and must be persisted
+	 */
+	public void markAsDirty();
+
+	/**
      * When using item-level buffering, this method tests whether there are
      * changes made to the EntityItem that have not yet been committed to the
      * underlying Entity ({@link #getEntity() }). If item-level buffering is not
@@ -213,8 +219,8 @@ public interface EntityItem<T> extends Item, Buffered,
     public Collection<?> getItemPropertyIds();
 
     /**
-     * This method refreshes persisted entity from EntityProvider and calls value change
-     * listeners for all properties.
+	 * This method refreshes persisted entity from EntityProvider and calls
+	 * value change listeners for all properties.
      * <p>
      * The method can be used to update one item if developer know it has been
      * changed either straight to the entity object or to backend.

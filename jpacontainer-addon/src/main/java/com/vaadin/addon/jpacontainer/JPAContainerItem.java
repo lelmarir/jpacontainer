@@ -195,6 +195,10 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     	container.containerItemPropertyModified(this, propertyId);
     }
     
+	void containerItemModified() {
+		container.containerItemModified(this);
+	}
+
     public boolean isItemPropertyLazyLoaded(String propertyName) {
 		return getPropertyList().isPropertyLazyLoaded(propertyName);
     }
@@ -245,6 +249,17 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     }
 
     @Override
+	public void markAsDirty() {
+		if (isWriteThrough() == false) {
+			throw new IllegalStateException(
+					"You shoud not modify the entity directly if the item is not WriteThrough, "
+							+ "thre could be unsaved property not yet reflected on the entity");
+		}
+		setDirty(true);
+		containerItemModified();
+	}
+
+	@Override
     public boolean isPersistent() {
         return persistent;
     }
@@ -455,4 +470,5 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     public boolean isBuffered() {
         return !isReadThrough() && !isWriteThrough();
     }
+
 }
