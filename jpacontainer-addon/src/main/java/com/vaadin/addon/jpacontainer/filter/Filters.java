@@ -16,6 +16,7 @@
 
 package com.vaadin.addon.jpacontainer.filter;
 
+import java.util.Collection;
 import java.util.List;
 
 import com.vaadin.addon.jpacontainer.util.CollectionUtil;
@@ -27,6 +28,7 @@ import com.vaadin.data.util.filter.Compare.Greater;
 import com.vaadin.data.util.filter.Compare.GreaterOrEqual;
 import com.vaadin.data.util.filter.Compare.Less;
 import com.vaadin.data.util.filter.Compare.LessOrEqual;
+import com.vaadin.data.util.filter.In;
 import com.vaadin.data.util.filter.IsNull;
 import com.vaadin.data.util.filter.Like;
 import com.vaadin.data.util.filter.Not;
@@ -255,5 +257,9 @@ public final class Filters {
      */
     public static JoinFilter joinFilter(String joinProperty, Filter... filters) {
         return new JoinFilter(joinProperty, filters);
+    }
+    
+    public static In in(Object propertyId, Collection<?> collection) {
+    	return new In(propertyId, collection);
     }
 }

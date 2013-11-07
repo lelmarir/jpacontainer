@@ -35,6 +35,7 @@ import com.vaadin.data.util.filter.Between;
 import com.vaadin.data.util.filter.Compare;
 import com.vaadin.data.util.filter.Compare.Equal;
 import com.vaadin.data.util.filter.Compare.Greater;
+import com.vaadin.data.util.filter.In;
 import com.vaadin.data.util.filter.IsNull;
 import com.vaadin.data.util.filter.Like;
 import com.vaadin.data.util.filter.Not;
@@ -246,13 +247,30 @@ public class FilterConverter {
         }
     }
 
+	private static class InConverter implements Converter {
+		@Override
+		public boolean canConvert(Filter filter) {
+			return filter instanceof In;
+		}
+
+		@Override
+		public <X, Y> Predicate toPredicate(Filter filter, CriteriaBuilder cb,
+				From<X, Y> root) {
+			In in = (In) filter;
+			Expression<? extends Comparable> field = AdvancedFilterableSupport
+					.getPropertyPath(root, in.getPropertyId());
+			return field.in(in.getCollection());
+		}
+	}
+
     private static Collection<Converter> converters;
     static {
         converters = Collections.unmodifiableCollection(Arrays.asList(
                 new AndConverter(), new OrConverter(), new CompareConverter(),
                 new IsNullConverter(), new SimpleStringFilterConverter(),
                 new LikeConverter(), new BetweenConverter(),
-                new JoinFilterConverter(), new NotFilterConverter()));
+				new JoinFilterConverter(), new NotFilterConverter(),
+				new InConverter()));
     }
 
     /**
