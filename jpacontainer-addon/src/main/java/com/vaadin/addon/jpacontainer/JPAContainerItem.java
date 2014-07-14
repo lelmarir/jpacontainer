@@ -100,6 +100,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         }
         this.propertyMap = new HashMap<Object, JPAContainerItemProperty<T>>();
 		// the itemRegistry will ignore this item if the id is null
+        //FIXME: l'item viene registrato quando viene salvato (e gli viene assegnato un id)?
         container.registerItem(this);
     }
 
@@ -188,7 +189,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	public void setItemPropertyValue(String propertyName, Object propertyValue)
 			throws IllegalArgumentException, IllegalStateException {
 		getPropertyList().setPropertyValue(entity, propertyName, propertyValue);
-    	dirty = true;
+    	setDirty(true);
     }
     
     void containerItemPropertyModified(String propertyId) {
@@ -444,9 +445,11 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
             } else {
                 replaceEntity(refreshedEntity);
             }
-            if (isDirty()) {
+            if (isDirty() || isModified()) {
                 discard();
             }
+            setDirty(false);
+            //FIXME we could fire only really changed properties
             Collection<String> itemPropertyIds = getItemPropertyIds();
             for (String string : itemPropertyIds) {
                 getItemProperty(string).fireValueChangeEvent();

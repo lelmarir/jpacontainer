@@ -296,7 +296,7 @@ public class MutableLocalEntityProvider<T> extends LocalEntityProvider<T>
         LinkedList<WeakReference<EntityProviderChangeListener<T>>> list;
         synchronized (getListeners()) {
             assert event != null : "event must not be null";
-            if (getListeners().isEmpty() && !isFireEntityProviderChangeEvent()) {
+            if (getListeners().isEmpty() || isFireEntityProviderChangeEvent() == false) {
                 return;
             }
             // cleanup

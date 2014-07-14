@@ -34,7 +34,6 @@ import com.vaadin.addon.jpacontainer.EntityProviderChangeEvent.EntityPropertyUpd
 import com.vaadin.addon.jpacontainer.filter.util.AdvancedFilterableSupport;
 import com.vaadin.addon.jpacontainer.metadata.EntityClassMetadata;
 import com.vaadin.addon.jpacontainer.metadata.MetadataFactory;
-import com.vaadin.addon.jpacontainer.metadata.PersistentPropertyMetadata;
 import com.vaadin.addon.jpacontainer.metadata.PropertyKind;
 import com.vaadin.addon.jpacontainer.util.CollectionUtil;
 import com.vaadin.data.Container;
@@ -127,1755 +126,1754 @@ import com.vaadin.data.util.filter.UnsupportedFilterException;
  * @since 1.0
  */
 public class JPAContainer<T> implements EntityContainer<T>,
-        EntityProviderChangeListener<T>, HierarchicalEntityContainer<T>,
-        Container.Indexed {
+		EntityProviderChangeListener<T>, HierarchicalEntityContainer<T>,
+		Container.Indexed {
 
-    private static final long serialVersionUID = -4031940552175752858L;
-    /**
-     * Rate on which cache cleanup (of empty weak references to instantiated
-     * entities) is performed.
-     */
-    private static final int CLEANUPRATE = 200;
+	private static final long serialVersionUID = -4031940552175752858L;
+	/**
+	 * Rate on which cache cleanup (of empty weak references to instantiated
+	 * entities) is performed.
+	 */
+	private static final int CLEANUPRATE = 200;
 	private static final int MAX_NESTED_COMMITS = 5;
-    private EntityProvider<T> entityProvider;
-    private AdvancedFilterableSupport filterSupport;
-    private LinkedList<ItemSetChangeListener> listeners;
-    private EntityClassMetadata<T> entityClassMetadata;
-    private List<SortBy> sortByList;
-    private PropertyList<T> propertyList;
-    private BufferedContainerDelegate<T> bufferingDelegate;
-    private boolean readOnly = false;
+	private EntityProvider<T> entityProvider;
+	private AdvancedFilterableSupport filterSupport;
+	private LinkedList<ItemSetChangeListener> listeners;
+	private EntityClassMetadata<T> entityClassMetadata;
+	private List<SortBy> sortByList;
+	private PropertyList<T> propertyList;
+	private BufferedContainerDelegate<T> bufferingDelegate;
+	private boolean readOnly = false;
+	@SuppressWarnings("serial")
 	private LinkedList<Boolean> writeThrough = new LinkedList<Boolean>() {
 		{
 			push(false);
 		}
 	};
 
-    transient private HashMap<Object, LinkedList<WeakReference<JPAContainerItem<T>>>> itemRegistry;
+	transient private HashMap<Object, LinkedList<WeakReference<JPAContainerItem<T>>>> itemRegistry;
 
-    private QueryModifierDelegate queryModifierDelegate;
+	private QueryModifierDelegate queryModifierDelegate;
 
-    /**
-     * Creates a new <code>JPAContainer</code> instance for entities of class
-     * <code>entityClass</code>. An entity provider must be provided using the
-     * {@link #setEntityProvider(com.vaadin.addon.jpacontainer.EntityProvider) }
-     * before the container can be used.
-     * 
-     * @param entityClass
-     *            the class of the entities that will reside in this container
-     *            (must not be null).
-     */
-    public JPAContainer(Class<T> entityClass) {
-        assert entityClass != null : "entityClass must not be null";
-        this.entityClassMetadata = MetadataFactory.getInstance()
-                .getEntityClassMetadata(entityClass);
-        this.propertyList = new PropertyList<T>(entityClassMetadata);
-        this.filterSupport = new AdvancedFilterableSupport();
-        this.bufferingDelegate = new BufferedContainerDelegate<T>(this);
-        /*
-         * Add a listener to filterSupport, so that we can notify all clients
-         * that use our container that the data has been filtered.
-         */
-        this.filterSupport
-                .addListener(new AdvancedFilterableSupport.ApplyFiltersListener() {
+	/**
+	 * Creates a new <code>JPAContainer</code> instance for entities of class
+	 * <code>entityClass</code>. An entity provider must be provided using the
+	 * {@link #setEntityProvider(com.vaadin.addon.jpacontainer.EntityProvider) }
+	 * before the container can be used.
+	 * 
+	 * @param entityClass
+	 *            the class of the entities that will reside in this container
+	 *            (must not be null).
+	 */
+	public JPAContainer(Class<T> entityClass) {
+		assert entityClass != null : "entityClass must not be null";
+		this.entityClassMetadata = MetadataFactory.getInstance()
+				.getEntityClassMetadata(entityClass);
+		this.propertyList = new PropertyList<T>(entityClassMetadata);
+		this.filterSupport = new AdvancedFilterableSupport();
+		this.bufferingDelegate = new BufferedContainerDelegate<T>(this);
+		/*
+		 * Add a listener to filterSupport, so that we can notify all clients
+		 * that use our container that the data has been filtered.
+		 */
+		this.filterSupport
+				.addListener(new AdvancedFilterableSupport.ApplyFiltersListener() {
 
-                    private static final long serialVersionUID = -23196201919497112L;
+					private static final long serialVersionUID = -23196201919497112L;
 
-                    @Override
+					@Override
 					public void filtersApplied(AdvancedFilterableSupport sender) {
-                        fireContainerItemSetChange(new FiltersAppliedEvent<JPAContainer<T>>(
-                                JPAContainer.this));
-                    }
-                });
-        updateFilterablePropertyIds();
-    }
+						fireContainerItemSetChange(new FiltersAppliedEvent<JPAContainer<T>>(
+								JPAContainer.this));
+					}
+				});
+		updateFilterablePropertyIds();
+	}
 
-    private Collection<String> additionalFilterablePropertyIds;
+	private Collection<String> additionalFilterablePropertyIds;
 
-    /**
-     * Sometimes, it may be necessary to filter by properties that do not show
-     * up in the container. This method can be used to add additional property
-     * IDs to the {@link #getFilterablePropertyIds() } collection. This method
-     * performs no propertyId validation, so it is up to the client to make sure
-     * the propertyIds are valid.
-     * 
-     * @param propertyIds
-     *            an array of additional propertyIds, may be null.
-     */
-    public void setAdditionalFilterablePropertyIds(String... propertyIds) {
-        if (propertyIds == null || propertyIds.length == 0) {
-            additionalFilterablePropertyIds = null;
-        } else {
-            additionalFilterablePropertyIds = Arrays.asList(propertyIds);
-        }
-        updateFilterablePropertyIds();
-    }
+	/**
+	 * Sometimes, it may be necessary to filter by properties that do not show
+	 * up in the container. This method can be used to add additional property
+	 * IDs to the {@link #getFilterablePropertyIds() } collection. This method
+	 * performs no propertyId validation, so it is up to the client to make sure
+	 * the propertyIds are valid.
+	 * 
+	 * @param propertyIds
+	 *            an array of additional propertyIds, may be null.
+	 */
+	public void setAdditionalFilterablePropertyIds(String... propertyIds) {
+		if (propertyIds == null || propertyIds.length == 0) {
+			additionalFilterablePropertyIds = null;
+		} else {
+			additionalFilterablePropertyIds = Arrays.asList(propertyIds);
+		}
+		updateFilterablePropertyIds();
+	}
 
-    protected void updateFilterablePropertyIds() {
-        // this.filterSupport
-        // .setFilterablePropertyIds((Collection<?>) propertyList
-        // .getPersistentPropertyNames());
-        HashSet<String> properties = new HashSet<String>();
-        properties.addAll(propertyList.getPersistentPropertyNames());
-        if (additionalFilterablePropertyIds != null) {
-            properties.addAll(additionalFilterablePropertyIds);
-        }
-        this.filterSupport.setFilterablePropertyIds(properties);
-    }
+	protected void updateFilterablePropertyIds() {
+		// this.filterSupport
+		// .setFilterablePropertyIds((Collection<?>) propertyList
+		// .getPersistentPropertyNames());
+		HashSet<String> properties = new HashSet<String>();
+		properties.addAll(propertyList.getPersistentPropertyNames());
+		if (additionalFilterablePropertyIds != null) {
+			properties.addAll(additionalFilterablePropertyIds);
+		}
+		this.filterSupport.setFilterablePropertyIds(properties);
+	}
 
-    /**
-     * Gets the mapping metadata of the entity class.
-     * 
-     * @see EntityClassMetadata
-     * 
-     * @return the metadata (never null).
-     */
-    protected EntityClassMetadata<T> getEntityClassMetadata() {
-        return entityClassMetadata;
-    }
+	/**
+	 * Gets the mapping metadata of the entity class.
+	 * 
+	 * @see EntityClassMetadata
+	 * 
+	 * @return the metadata (never null).
+	 */
+	protected EntityClassMetadata<T> getEntityClassMetadata() {
+		return entityClassMetadata;
+	}
 
-    @Override
+	@Override
 	public void addListener(ItemSetChangeListener listener) {
-        if (listener == null) {
-            return;
-        }
-        if (listeners == null) {
-            listeners = new LinkedList<ItemSetChangeListener>();
-        }
-        listeners.add(listener);
-    }
+		if (listener == null) {
+			return;
+		}
+		if (listeners == null) {
+			listeners = new LinkedList<ItemSetChangeListener>();
+		}
+		listeners.add(listener);
+	}
 
-    @Override
+	@Override
 	public void removeListener(ItemSetChangeListener listener) {
-        if (listener != null && listeners != null) {
-            listeners.remove(listener);
-        }
-    }
+		if (listener != null && listeners != null) {
+			listeners.remove(listener);
+		}
+	}
 
-    /**
-     * Publishes <code>event</code> to all registered
-     * <code>ItemSetChangeListener</code>s.
-     * 
-     * @param event
-     *            the event to publish (must not be null).
-     */
-    @SuppressWarnings("unchecked")
-    protected void fireContainerItemSetChange(final ItemSetChangeEvent event) {
-        assert event != null : "event must not be null";
-        if (listeners == null || !fireContainerItemSetChangeEvents) {
-            return;
-        }
-        LinkedList<ItemSetChangeListener> list = (LinkedList<ItemSetChangeListener>) listeners
-                .clone();
-        for (ItemSetChangeListener l : list) {
-            l.containerItemSetChange(event);
-        }
-    }
-
-    private boolean fireContainerItemSetChangeEvents = true;
-
-    /**
-     * Specifies whether the container should fire an item set change event when
-     * it detects a change in the entity provider (such as an entity being
-     * added, updated or deleted).
-     */
-    public void setFireContainerItemSetChangeEvents(boolean value) {
-        this.fireContainerItemSetChangeEvents = value;
-    }
-
-    /**
-     * Tests whether the container should fire an item set change event when it
-     * detects a change in the entity provider (such as an entity being added,
-     * updated or deleted).
-     * 
-     * @return true if item set change events should be fired (default), false
-     *         otherwise.
-     */
-    public boolean isFireContainerItemSetChangeEvents() {
-        return fireContainerItemSetChangeEvents;
-    }
-
-    @Override
-	public void addNestedContainerProperty(String nestedProperty)
-            throws UnsupportedOperationException {
-        propertyList.addNestedProperty(nestedProperty);
-        updateFilterablePropertyIds();
-    }
-
-    @Override
-	public Class<T> getEntityClass() {
-        return getEntityClassMetadata().getMappedClass();
-    }
-
-    @Override
-	public EntityProvider<T> getEntityProvider() {
-        return entityProvider;
-    }
-
-    /**
-     * Checks that the entity provider is not null and returns it.
-     * 
-     * @return the entity provider (never null).
-     * @throws IllegalStateException
-     *             if the entity provider was null.
-     */
-    protected EntityProvider<T> doGetEntityProvider()
-            throws IllegalStateException {
-        if (entityProvider == null) {
-            throw new IllegalStateException("No EntityProvider has been set");
-        }
-        return entityProvider;
-    }
-
-    @Override
-	public boolean isReadOnly() {
-        return !(doGetEntityProvider() instanceof MutableEntityProvider)
-                || readOnly;
-    }
-
-    @Override
+	/**
+	 * Publishes <code>event</code> to all registered
+	 * <code>ItemSetChangeListener</code>s.
+	 * 
+	 * @param event
+	 *            the event to publish (must not be null).
+	 */
 	@SuppressWarnings("unchecked")
-    public void setEntityProvider(EntityProvider<T> entityProvider) {
-        assert entityProvider != null : "entityProvider must not be null";
-        // Remove listener from old provider
-        if (this.entityProvider != null
-                && this.entityProvider instanceof EntityProviderChangeNotifier) {
-            ((EntityProviderChangeNotifier<T>) this.entityProvider)
-                    .removeListener(this);
-        }
-        this.entityProvider = entityProvider;
-        // Register listener with new provider
-        registerProvider();
-    }
+	protected void fireContainerItemSetChange(final ItemSetChangeEvent event) {
+		assert event != null : "event must not be null";
+		if (listeners == null || !fireContainerItemSetChangeEvents) {
+			return;
+		}
+		LinkedList<ItemSetChangeListener> list = (LinkedList<ItemSetChangeListener>) listeners
+				.clone();
+		for (ItemSetChangeListener l : list) {
+			l.containerItemSetChange(event);
+		}
+	}
 
-    @SuppressWarnings("unchecked")
-    private void registerProvider() {
-        if (this.entityProvider instanceof EntityProviderChangeNotifier) {
-            ((EntityProviderChangeNotifier<T>) this.entityProvider)
-                    .addListener(this);
-        }
-    }
+	private boolean fireContainerItemSetChangeEvents = true;
 
-    private void readObject(java.io.ObjectInputStream in) throws IOException,
-            ClassNotFoundException {
-        in.defaultReadObject();
-        // reattach to weak listener list of provider
-        registerProvider();
-    }
+	/**
+	 * Specifies whether the container should fire an item set change event when
+	 * it detects a change in the entity provider (such as an entity being
+	 * added, updated or deleted).
+	 */
+	public void setFireContainerItemSetChangeEvents(boolean value) {
+		this.fireContainerItemSetChangeEvents = value;
+	}
 
-    private boolean fireItemSetChangeOnProviderChange = true;
+	/**
+	 * Tests whether the container should fire an item set change event when it
+	 * detects a change in the entity provider (such as an entity being added,
+	 * updated or deleted).
+	 * 
+	 * @return true if item set change events should be fired (default), false
+	 *         otherwise.
+	 */
+	public boolean isFireContainerItemSetChangeEvents() {
+		return fireContainerItemSetChangeEvents;
+	}
 
-    /**
-     * Specifies whether the container should fire an ItemSetChangeEvent when an
-     * EntityProviderChangeEvent is received. This is used to prevent clients
-     * from receiving duplicate ItemSetChangeEvents when the container modifies
-     * data and wants to handle ItemSetChangeEvents itself.
-     * 
-     * @param fireItemSetChangeOnProviderChange
-     *            true fo fire an ItemSetChangeEvent when the provider changes,
-     *            false not to.
-     */
-    protected void setFireItemSetChangeOnProviderChange(
-            boolean fireItemSetChangeOnProviderChange) {
-        this.fireItemSetChangeOnProviderChange = fireItemSetChangeOnProviderChange;
-    }
+	@Override
+	public void addNestedContainerProperty(String nestedProperty)
+			throws UnsupportedOperationException {
+		propertyList.addNestedProperty(nestedProperty);
+		updateFilterablePropertyIds();
+	}
 
-    /**
-     * @see #setFireItemSetChangeOnProviderChange(boolean)
-     * @return true if an ItemSetChangeEvent should be fired when the provider
-     *         changes, false if it should not.
-     */
-    protected boolean isFireItemSetChangeOnProviderChange() {
-        return fireItemSetChangeOnProviderChange;
-    }
+	@Override
+	public Class<T> getEntityClass() {
+		return getEntityClassMetadata().getMappedClass();
+	}
 
-    @Override
+	@Override
+	public EntityProvider<T> getEntityProvider() {
+		return entityProvider;
+	}
+
+	/**
+	 * Checks that the entity provider is not null and returns it.
+	 * 
+	 * @return the entity provider (never null).
+	 * @throws IllegalStateException
+	 *             if the entity provider was null.
+	 */
+	protected EntityProvider<T> doGetEntityProvider()
+			throws IllegalStateException {
+		if (entityProvider == null) {
+			throw new IllegalStateException("No EntityProvider has been set");
+		}
+		return entityProvider;
+	}
+
+	@Override
+	public boolean isReadOnly() {
+		return !(doGetEntityProvider() instanceof MutableEntityProvider)
+				|| readOnly;
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public void setEntityProvider(EntityProvider<T> entityProvider) {
+		assert entityProvider != null : "entityProvider must not be null";
+		// Remove listener from old provider
+		if (this.entityProvider != null
+				&& this.entityProvider instanceof EntityProviderChangeNotifier) {
+			((EntityProviderChangeNotifier<T>) this.entityProvider)
+					.removeListener(this);
+		}
+		this.entityProvider = entityProvider;
+		// Register listener with new provider
+		registerProvider();
+	}
+
+	@SuppressWarnings("unchecked")
+	private void registerProvider() {
+		if (this.entityProvider instanceof EntityProviderChangeNotifier) {
+			((EntityProviderChangeNotifier<T>) this.entityProvider)
+					.addListener(this);
+		}
+	}
+
+	private void readObject(java.io.ObjectInputStream in) throws IOException,
+			ClassNotFoundException {
+		in.defaultReadObject();
+		// reattach to weak listener list of provider
+		registerProvider();
+	}
+
+	private boolean fireItemSetChangeOnProviderChange = true;
+
+	/**
+	 * Specifies whether the container should fire an ItemSetChangeEvent when an
+	 * EntityProviderChangeEvent is received. This is used to prevent clients
+	 * from receiving duplicate ItemSetChangeEvents when the container modifies
+	 * data and wants to handle ItemSetChangeEvents itself.
+	 * 
+	 * @param fireItemSetChangeOnProviderChange
+	 *            true fo fire an ItemSetChangeEvent when the provider changes,
+	 *            false not to.
+	 */
+	protected void setFireItemSetChangeOnProviderChange(
+			boolean fireItemSetChangeOnProviderChange) {
+		this.fireItemSetChangeOnProviderChange = fireItemSetChangeOnProviderChange;
+	}
+
+	/**
+	 * @see #setFireItemSetChangeOnProviderChange(boolean)
+	 * @return true if an ItemSetChangeEvent should be fired when the provider
+	 *         changes, false if it should not.
+	 */
+	protected boolean isFireItemSetChangeOnProviderChange() {
+		return fireItemSetChangeOnProviderChange;
+	}
+
+	@Override
 	public void entityProviderChange(EntityProviderChangeEvent<T> event) {
-        if (isItemSetChangeEvent(event)
-                && isFireItemSetChangeOnProviderChange()) {
-            fireContainerItemSetChange(new ProviderChangedEvent(event));
-        } else {
-            if (event instanceof EntityPropertyUpdatedEvent) {
-                // TODO fire itemSetChange event in case property of a sort
-                // column has changed
-                EntityPropertyUpdatedEvent<T> evt = (EntityPropertyUpdatedEvent<T>) event;
-                Collection<T> affectedEntities = evt.getAffectedEntities();
-                if (affectedEntities.isEmpty()) {
-                    return;
-                }
-                for (T t : affectedEntities) {
-                    if (entityClassMetadata.hasIdentifierProperty()) {
-                        PersistentPropertyMetadata identifierProperty = entityClassMetadata
-                                .getIdentifierProperty();
-                        Object itemId = getIdentifierPropertyValue(t);
-                        firePropertyValueChangeEvent(itemId,
-                                ((EntityPropertyUpdatedEvent<T>) event)
-                                        .getPropertyId());
-                    }
-                }
-            }
-        }
+		if (isItemSetChangeEvent(event)
+				&& isFireItemSetChangeOnProviderChange()) {
+			fireContainerItemSetChange(new ProviderChangedEvent(event));
+		} else {
+			if (event instanceof EntityPropertyUpdatedEvent) {
+				// TODO fire itemSetChange event in case property of a sort
+				// column has changed
+				EntityPropertyUpdatedEvent<T> evt = (EntityPropertyUpdatedEvent<T>) event;
+				Collection<T> affectedEntities = evt.getAffectedEntities();
+				if (affectedEntities.isEmpty()) {
+					return;
+				}
+				for (T t : affectedEntities) {
+					if (entityClassMetadata.hasIdentifierProperty()) {
+						Object itemId = getIdentifierPropertyValue(t);
+						firePropertyValueChangeEvent(itemId,
+								((EntityPropertyUpdatedEvent<T>) event)
+										.getPropertyId());
+					}
+				}
+			}
+		}
 
-    }
+	}
 
-    @SuppressWarnings("unchecked")
-    protected void firePropertyValueChangeEvent(Object itemId, String propertyId) {
-        LinkedList<WeakReference<JPAContainerItem<T>>> linkedList;
-        synchronized (getItemRegistry()) {
-            LinkedList<WeakReference<JPAContainerItem<T>>> origList = getItemRegistry()
-                    .get(itemId);
-            if (origList != null) {
-                linkedList = (LinkedList<WeakReference<JPAContainerItem<T>>>) origList
-                        .clone();
-            } else {
-                return;
-            }
-        }
-        for (Iterator<WeakReference<JPAContainerItem<T>>> iterator = linkedList
-                .iterator(); iterator.hasNext();) {
-            WeakReference<JPAContainerItem<T>> weakReference = iterator.next();
-            JPAContainerItem<T> jpaContainerItem = weakReference.get();
-            if (jpaContainerItem != null) {
-                EntityItemProperty itemProperty = jpaContainerItem
-                        .getItemProperty(propertyId);
-                itemProperty.fireValueChangeEvent();
-            }
-        }
-    }
+	@SuppressWarnings("unchecked")
+	protected void firePropertyValueChangeEvent(Object itemId, String propertyId) {
+		LinkedList<WeakReference<JPAContainerItem<T>>> linkedList;
+		synchronized (getItemRegistry()) {
+			LinkedList<WeakReference<JPAContainerItem<T>>> origList = getItemRegistry()
+					.get(itemId);
+			if (origList != null) {
+				linkedList = (LinkedList<WeakReference<JPAContainerItem<T>>>) origList
+						.clone();
+			} else {
+				return;
+			}
+		}
+		for (Iterator<WeakReference<JPAContainerItem<T>>> iterator = linkedList
+				.iterator(); iterator.hasNext();) {
+			WeakReference<JPAContainerItem<T>> weakReference = iterator.next();
+			JPAContainerItem<T> jpaContainerItem = weakReference.get();
+			if (jpaContainerItem != null) {
+				EntityItemProperty itemProperty = jpaContainerItem
+						.getItemProperty(propertyId);
+				itemProperty.fireValueChangeEvent();
+			}
+		}
+	}
 
-    private boolean isItemSetChangeEvent(EntityProviderChangeEvent<T> event) {
-        if (event instanceof EntityPropertyUpdatedEvent) {
-            return false;
-        }
-        return true;
-    }
+	private boolean isItemSetChangeEvent(EntityProviderChangeEvent<T> event) {
+		if (event instanceof EntityPropertyUpdatedEvent) {
+			return false;
+		}
+		return true;
+	}
 
-    @Override
+	@Override
 	public void setReadOnly(boolean readOnly)
-            throws UnsupportedOperationException {
-        if (readOnly) {
-            this.readOnly = readOnly;
-        } else {
-            if (doGetEntityProvider() instanceof MutableEntityProvider) {
-                this.readOnly = readOnly;
-            } else {
-                throw new UnsupportedOperationException(
-                        "EntityProvider is not mutable");
-            }
-        }
-    }
+			throws UnsupportedOperationException {
+		if (readOnly) {
+			this.readOnly = readOnly;
+		} else {
+			if (doGetEntityProvider() instanceof MutableEntityProvider) {
+				this.readOnly = readOnly;
+			} else {
+				throw new UnsupportedOperationException(
+						"EntityProvider is not mutable");
+			}
+		}
+	}
 
-    /**
-     * Configures a property to be sortable based on another property, normally
-     * a sub-property of the main property to sort.
-     * <p>
-     * For example, let's say there is a property named <code>address</code> and
-     * that this property's type in turn has the property <code>street</code>.
-     * Addresses are not directly sortable as they are not simple properties.
-     * <p>
-     * If we want to be able to sort addresses based on the street property, we
-     * can set the sort property for <code>address</code> to be
-     * <code>address.street</code> using this method.
-     * <p>
-     * Normally the sort property should be of the form
-     * <code>propertyId + "." + subPropertyId</code>. Sort properties must be
-     * persistent and usable in JPQL, but need not be registered as separate
-     * properties in the container.
-     * <p>
-     * Note that the sort property is not checked when this method is called. If
-     * it is not a valid sort property, an exception will be thrown when trying
-     * to sort a container.
-     * 
-     * @param propertyId
-     *            property for which sorting should be configured
-     * @param sortProperty
-     *            property or other JPQL string that should be used when sorting
-     *            by propertyId is requested, typically a sub-property
-     *            propertyId
-     * @throws IllegalArgumentException
-     *             if the property <code>propertyId</code> is not in the
-     *             container
-     * @since 1.2.1
-     */
-    public void setSortProperty(String propertyId, String sortProperty)
-            throws IllegalArgumentException {
-        propertyList.setSortProperty(propertyId, sortProperty);
-    }
+	/**
+	 * Configures a property to be sortable based on another property, normally
+	 * a sub-property of the main property to sort.
+	 * <p>
+	 * For example, let's say there is a property named <code>address</code> and
+	 * that this property's type in turn has the property <code>street</code>.
+	 * Addresses are not directly sortable as they are not simple properties.
+	 * <p>
+	 * If we want to be able to sort addresses based on the street property, we
+	 * can set the sort property for <code>address</code> to be
+	 * <code>address.street</code> using this method.
+	 * <p>
+	 * Normally the sort property should be of the form
+	 * <code>propertyId + "." + subPropertyId</code>. Sort properties must be
+	 * persistent and usable in JPQL, but need not be registered as separate
+	 * properties in the container.
+	 * <p>
+	 * Note that the sort property is not checked when this method is called. If
+	 * it is not a valid sort property, an exception will be thrown when trying
+	 * to sort a container.
+	 * 
+	 * @param propertyId
+	 *            property for which sorting should be configured
+	 * @param sortProperty
+	 *            property or other JPQL string that should be used when sorting
+	 *            by propertyId is requested, typically a sub-property
+	 *            propertyId
+	 * @throws IllegalArgumentException
+	 *             if the property <code>propertyId</code> is not in the
+	 *             container
+	 * @since 1.2.1
+	 */
+	public void setSortProperty(String propertyId, String sortProperty)
+			throws IllegalArgumentException {
+		propertyList.setSortProperty(propertyId, sortProperty);
+	}
 
-    @Override
+	@Override
 	public Collection<String> getSortableContainerPropertyIds() {
-        // This includes properties for which a separate sort property has been
-        // defined.
-        return propertyList.getSortablePropertyMap().keySet();
-    }
+		// This includes properties for which a separate sort property has been
+		// defined.
+		return propertyList.getSortablePropertyMap().keySet();
+	}
 
-    @Override
+	@Override
 	public void sort(Object[] propertyId, boolean[] ascending) {
-        assert propertyId != null : "propertyId must not be null";
-        assert ascending != null : "ascending must not be null";
-        assert propertyId.length == ascending.length : "propertyId and ascending must have the same length";
-        sortByList = new LinkedList<SortBy>();
-        for (int i = 0; i < propertyId.length; ++i) {
-            if (!getSortableContainerPropertyIds().contains(
-                    propertyId[i].toString())) {
-                throw new IllegalArgumentException(
-                        "No such sortable property ID: " + propertyId[i]);
-            }
-            // #7711 map property ID to a sortable sub-property if configured
-            Object sortProperty = propertyList.getSortablePropertyMap().get(
-                    propertyId[i]);
-            sortByList.add(new SortBy(sortProperty.toString(), ascending[i]));
-        }
-        sortByList = Collections.unmodifiableList(sortByList);
-        fireContainerItemSetChange(new ContainerSortedEvent());
-    }
+		assert propertyId != null : "propertyId must not be null";
+		assert ascending != null : "ascending must not be null";
+		assert propertyId.length == ascending.length : "propertyId and ascending must have the same length";
+		sortByList = new LinkedList<SortBy>();
+		for (int i = 0; i < propertyId.length; ++i) {
+			if (!getSortableContainerPropertyIds().contains(
+					propertyId[i].toString())) {
+				throw new IllegalArgumentException(
+						"No such sortable property ID: " + propertyId[i]);
+			}
+			// #7711 map property ID to a sortable sub-property if configured
+			Object sortProperty = propertyList.getSortablePropertyMap().get(
+					propertyId[i]);
+			sortByList.add(new SortBy(sortProperty.toString(), ascending[i]));
+		}
+		sortByList = Collections.unmodifiableList(sortByList);
+		fireContainerItemSetChange(new ContainerSortedEvent());
+	}
 
-    /**
-     * Gets all the properties that the items should be sorted by, if any.
-     * 
-     * @return an unmodifiable, possible empty list of <code>SortBy</code>
-     *         instances (never null).
-     */
-    protected List<SortBy> getSortByList() {
-        if (sortByList == null) {
-            return Collections.emptyList();
-        } else {
-            return sortByList;
-        }
-    }
+	/**
+	 * Gets all the properties that the items should be sorted by, if any.
+	 * 
+	 * @return an unmodifiable, possible empty list of <code>SortBy</code>
+	 *         instances (never null).
+	 */
+	protected List<SortBy> getSortByList() {
+		if (sortByList == null) {
+			return Collections.emptyList();
+		} else {
+			return sortByList;
+		}
+	}
 
-    /**
-     * <strong>This functionality is not supported by this
-     * implementation.</strong>
-     * <p>
-     * {@inheritDoc }
-     */
-    @Override
+	/**
+	 * <strong>This functionality is not supported by this
+	 * implementation.</strong>
+	 * <p>
+	 * {@inheritDoc }
+	 */
+	@Override
 	public Object addItemAfter(Object previousItemId)
-            throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
-    }
+			throws UnsupportedOperationException {
+		throw new UnsupportedOperationException();
+	}
 
-    /**
-     * <strong>This functionality is not supported by this
-     * implementation.</strong>
-     * <p>
-     * {@inheritDoc }
-     */
-    @Override
+	/**
+	 * <strong>This functionality is not supported by this
+	 * implementation.</strong>
+	 * <p>
+	 * {@inheritDoc }
+	 */
+	@Override
 	public Item addItemAfter(Object previousItemId, Object newItemId)
-            throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
-    }
+			throws UnsupportedOperationException {
+		throw new UnsupportedOperationException();
+	}
 
-    @Override
+	@Override
 	public Object firstItemId() {
-        if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()) {
-            Object itemId = doGetEntityProvider().getFirstEntityIdentifier(
-                    this, getAppliedFiltersAsConjunction(), getSortByList());
-            if (itemId != null && !isWriteThrough()
-                    && bufferingDelegate.getDeletedItemIds().contains(itemId)) {
-                itemId = nextItemId(itemId);
-            }
-            return itemId;
-        } else {
-            return bufferingDelegate.getAddedItemIds().get(0);
-        }
-    }
+		if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()) {
+			Object itemId = doGetEntityProvider().getFirstEntityIdentifier(
+					this, getAppliedFiltersAsConjunction(), getSortByList());
+			if (itemId != null && !isWriteThrough()
+					&& bufferingDelegate.getDeletedItemIds().contains(itemId)) {
+				itemId = nextItemId(itemId);
+			}
+			return itemId;
+		} else {
+			return bufferingDelegate.getAddedItemIds().get(0);
+		}
+	}
 
-    @Override
+	@Override
 	public boolean isFirstId(Object itemId) {
-        assert itemId != null : "itemId must not be null";
-        return itemId.equals(firstItemId());
-    }
+		assert itemId != null : "itemId must not be null";
+		return itemId.equals(firstItemId());
+	}
 
-    @Override
+	@Override
 	public boolean isLastId(Object itemId) {
-        assert itemId != null : "itemId must not be null";
-        return itemId.equals(lastItemId());
-    }
+		assert itemId != null : "itemId must not be null";
+		return itemId.equals(lastItemId());
+	}
 
-    @Override
+	@Override
 	public Object lastItemId() {
-        Object itemId = doGetEntityProvider().getLastEntityIdentifier(this,
-                getAppliedFiltersAsConjunction(), getSortByList());
-        if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()) {
-            return itemId;
-        } else {
-            if (itemId == null) {
-                return bufferingDelegate.getAddedItemIds().get(
-                        bufferingDelegate.getAddedItemIds().size() - 1);
-            } else {
-                return itemId;
-            }
-        }
-    }
+		Object itemId = doGetEntityProvider().getLastEntityIdentifier(this,
+				getAppliedFiltersAsConjunction(), getSortByList());
+		if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()) {
+			return itemId;
+		} else {
+			if (itemId == null) {
+				return bufferingDelegate.getAddedItemIds().get(
+						bufferingDelegate.getAddedItemIds().size() - 1);
+			} else {
+				return itemId;
+			}
+		}
+	}
 
-    @Override
+	@Override
 	public Object nextItemId(Object itemId) {
-        // Note, we do not check if given itemId is deleted as we use this
-        // method recursively to get itemId that is not deleted
-        if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()
-                || !bufferingDelegate.isAdded(itemId)) {
-            Object id = doGetEntityProvider().getNextEntityIdentifier(this,
-                    itemId, getAppliedFiltersAsConjunction(), getSortByList());
-            if (id != null && !isWriteThrough()
-                    && bufferingDelegate.isDeleted(id)) {
-                id = nextItemId(id);
-            }
-            return id;
-        } else {
-            int ix = bufferingDelegate.getAddedItemIds().indexOf(itemId);
-            if (ix == bufferingDelegate.getAddedItemIds().size() - 1) {
-                Object id = doGetEntityProvider()
-                        .getFirstEntityIdentifier(this,
-                                getAppliedFiltersAsConjunction(),
-                                getSortByList());
-                if (id != null && bufferingDelegate.isDeleted(id)) {
-                    id = nextItemId(id);
-                }
-                return id;
-            } else {
-                return bufferingDelegate.getAddedItemIds().get(ix + 1);
-            }
-        }
-    }
+		// Note, we do not check if given itemId is deleted as we use this
+		// method recursively to get itemId that is not deleted
+		if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()
+				|| !bufferingDelegate.isAdded(itemId)) {
+			Object id = doGetEntityProvider().getNextEntityIdentifier(this,
+					itemId, getAppliedFiltersAsConjunction(), getSortByList());
+			if (id != null && !isWriteThrough()
+					&& bufferingDelegate.isDeleted(id)) {
+				id = nextItemId(id);
+			}
+			return id;
+		} else {
+			int ix = bufferingDelegate.getAddedItemIds().indexOf(itemId);
+			if (ix == bufferingDelegate.getAddedItemIds().size() - 1) {
+				Object id = doGetEntityProvider()
+						.getFirstEntityIdentifier(this,
+								getAppliedFiltersAsConjunction(),
+								getSortByList());
+				if (id != null && bufferingDelegate.isDeleted(id)) {
+					id = nextItemId(id);
+				}
+				return id;
+			} else {
+				return bufferingDelegate.getAddedItemIds().get(ix + 1);
+			}
+		}
+	}
 
-    @Override
+	@Override
 	public Object prevItemId(Object itemId) {
-        // Note, we do not check if given itemId is deleted as we use this
-        // method recursively to get itemId that is not deleted
-        if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()) {
-            Object id = doGetEntityProvider().getPreviousEntityIdentifier(this,
-                    itemId, getAppliedFiltersAsConjunction(), getSortByList());
-            if (id != null && !isWriteThrough()
-                    && bufferingDelegate.isDeleted(id)) {
-                id = prevItemId(id);
-            }
-            return id;
-        } else {
-            if (bufferingDelegate.isAdded(itemId)) {
-                int ix = bufferingDelegate.getAddedItemIds().indexOf(itemId);
-                if (ix == 0) {
-                    return null;
-                } else {
-                    return bufferingDelegate.getAddedItemIds().get(ix - 1);
-                }
-            } else {
-                Object prevId = doGetEntityProvider()
-                        .getPreviousEntityIdentifier(this, itemId,
-                                getAppliedFiltersAsConjunction(),
-                                getSortByList());
-                if (prevId == null) {
-                    return bufferingDelegate.getAddedItemIds().get(
-                            bufferingDelegate.getAddedItemIds().size() - 1);
-                } else {
-                    if (!isWriteThrough()
-                            && bufferingDelegate.isDeleted(prevId)) {
-                        prevId = prevItemId(prevId);
-                    }
-                    return prevId;
-                }
-            }
-        }
-    }
+		// Note, we do not check if given itemId is deleted as we use this
+		// method recursively to get itemId that is not deleted
+		if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()) {
+			Object id = doGetEntityProvider().getPreviousEntityIdentifier(this,
+					itemId, getAppliedFiltersAsConjunction(), getSortByList());
+			if (id != null && !isWriteThrough()
+					&& bufferingDelegate.isDeleted(id)) {
+				id = prevItemId(id);
+			}
+			return id;
+		} else {
+			if (bufferingDelegate.isAdded(itemId)) {
+				int ix = bufferingDelegate.getAddedItemIds().indexOf(itemId);
+				if (ix == 0) {
+					return null;
+				} else {
+					return bufferingDelegate.getAddedItemIds().get(ix - 1);
+				}
+			} else {
+				Object prevId = doGetEntityProvider()
+						.getPreviousEntityIdentifier(this, itemId,
+								getAppliedFiltersAsConjunction(),
+								getSortByList());
+				if (prevId == null) {
+					return bufferingDelegate.getAddedItemIds().get(
+							bufferingDelegate.getAddedItemIds().size() - 1);
+				} else {
+					if (!isWriteThrough()
+							&& bufferingDelegate.isDeleted(prevId)) {
+						prevId = prevItemId(prevId);
+					}
+					return prevId;
+				}
+			}
+		}
+	}
 
-    /**
-     * <strong>This functionality is not supported by this
-     * implementation.</strong>
-     * <p>
-     * {@inheritDoc }
-     */
-    @Override
+	/**
+	 * <strong>This functionality is not supported by this
+	 * implementation.</strong>
+	 * <p>
+	 * {@inheritDoc }
+	 */
+	@Override
 	public boolean addContainerProperty(Object propertyId, Class<?> type,
-            Object defaultValue) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
-    }
+			Object defaultValue) throws UnsupportedOperationException {
+		throw new UnsupportedOperationException();
+	}
 
-    /**
-     * <strong>This functionality is not supported by this
-     * implementation.</strong>
-     * <p>
-     * {@inheritDoc }
-     */
-    @Override
+	/**
+	 * <strong>This functionality is not supported by this
+	 * implementation.</strong>
+	 * <p>
+	 * {@inheritDoc }
+	 */
+	@Override
 	public Item addItem(Object itemId) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
-    }
+		throw new UnsupportedOperationException();
+	}
 
-    /**
-     * <strong>This functionality is not fully supported by this
-     * implementation.</strong> The implementation tries to call empty parameter
-     * constructor and add entity as such to database. If identifiers are not
-     * autogenerated or empty parameter constructor does not exist, the
-     * operation will fail and throw UnSupportedOperationException.
-     * <p>
-     * {@inheritDoc }
-     */
-    @Override
+	/**
+	 * <strong>This functionality is not fully supported by this
+	 * implementation.</strong> The implementation tries to call empty parameter
+	 * constructor and add entity as such to database. If identifiers are not
+	 * autogenerated or empty parameter constructor does not exist, the
+	 * operation will fail and throw UnSupportedOperationException.
+	 * <p>
+	 * {@inheritDoc }
+	 */
+	@Override
 	public Object addItem() throws UnsupportedOperationException {
-        try {
-            T newInstance = getEntityClass().newInstance();
-            Object id = addEntity(newInstance);
-            return id;
-        } catch (InstantiationException e) {
-        } catch (IllegalAccessException e) {
-        }
-        throw new UnsupportedOperationException();
-    }
+		try {
+			T newInstance = getEntityClass().newInstance();
+			Object id = addEntity(newInstance);
+			return id;
+		} catch (InstantiationException e) {
+		} catch (IllegalAccessException e) {
+		}
+		throw new UnsupportedOperationException();
+	}
 
-    @Override
+	@Override
 	public boolean containsId(Object itemId) {
-        boolean result = doContainsId(itemId);
-        if (containsIdFiresItemSetChangeIfNotFound && !result) {
-            fireContainerItemSetChange(new ItemNotFoundEvent());
-        }
-        return result;
-    }
+		boolean result = doContainsId(itemId);
+		if (containsIdFiresItemSetChangeIfNotFound && !result) {
+			fireContainerItemSetChange(new ItemNotFoundEvent());
+		}
+		return result;
+	}
 
-    private boolean containsIdFiresItemSetChangeIfNotFound = false;
-    private int cleanupCount;
+	private boolean containsIdFiresItemSetChangeIfNotFound = false;
+	private int cleanupCount;
 
-    /**
-     * Returns whether the {@link #containsId(java.lang.Object) } method will
-     * fire an item set change event if it returns false. This may be necessary
-     * when using the container together with a {@link com.vaadin.ui.Table} and
-     * there are multiple users modifying the same data source.
-     * <p>
-     * When a user selects an item in a Table, the table checks with the
-     * container if the item exists or not. If it does not exist, nothing
-     * happens. Normally, the item should always exist, but if the container has
-     * been changed after the initial set of items were fetched and cached by
-     * the table, there may be items in the Table that are not present in the
-     * container.
-     * <p>
-     * By enabling this flag, the Table will repaint itself if it tries to
-     * select a nonexistent item, causing the item to dissapear from the table
-     * as well.
-     */
-    public boolean isContainsIdFiresItemSetChangeIfNotFound() {
-        return containsIdFiresItemSetChangeIfNotFound;
-    }
+	/**
+	 * Returns whether the {@link #containsId(java.lang.Object) } method will
+	 * fire an item set change event if it returns false. This may be necessary
+	 * when using the container together with a {@link com.vaadin.ui.Table} and
+	 * there are multiple users modifying the same data source.
+	 * <p>
+	 * When a user selects an item in a Table, the table checks with the
+	 * container if the item exists or not. If it does not exist, nothing
+	 * happens. Normally, the item should always exist, but if the container has
+	 * been changed after the initial set of items were fetched and cached by
+	 * the table, there may be items in the Table that are not present in the
+	 * container.
+	 * <p>
+	 * By enabling this flag, the Table will repaint itself if it tries to
+	 * select a nonexistent item, causing the item to dissapear from the table
+	 * as well.
+	 */
+	public boolean isContainsIdFiresItemSetChangeIfNotFound() {
+		return containsIdFiresItemSetChangeIfNotFound;
+	}
 
-    /**
-     * See {@link #isContainsIdFiresItemSetChangeIfNotFound() }.
-     * 
-     * @param value
-     */
-    public void setContainsIdFiresItemSetChangeIfNotFound(boolean value) {
-        this.containsIdFiresItemSetChangeIfNotFound = value;
-    }
+	/**
+	 * See {@link #isContainsIdFiresItemSetChangeIfNotFound() }.
+	 * 
+	 * @param value
+	 */
+	public void setContainsIdFiresItemSetChangeIfNotFound(boolean value) {
+		this.containsIdFiresItemSetChangeIfNotFound = value;
+	}
 
-    /**
-     * @see Container#containsId(java.lang.Object)
-     */
-    protected boolean doContainsId(Object itemId) {
-        if (isWriteThrough()) {
-            return doGetEntityProvider().containsEntity(this, itemId,
-                    getAppliedFiltersAsConjunction());
-        } else {
-            return bufferingDelegate.isAdded(itemId)
-                    || (!bufferingDelegate.isDeleted(itemId) && doGetEntityProvider()
-                            .containsEntity(this, itemId,
-                                    getAppliedFiltersAsConjunction()));
-        }
-    }
+	/**
+	 * @see Container#containsId(java.lang.Object)
+	 */
+	protected boolean doContainsId(Object itemId) {
+		if (isWriteThrough()) {
+			return doGetEntityProvider().containsEntity(this, itemId,
+					getAppliedFiltersAsConjunction());
+		} else {
+			return bufferingDelegate.isAdded(itemId)
+					|| (!bufferingDelegate.isDeleted(itemId) && doGetEntityProvider()
+							.containsEntity(this, itemId,
+									getAppliedFiltersAsConjunction()));
+		}
+	}
 
-    @Override
+	@SuppressWarnings("rawtypes")
+	@Override
 	public Property getContainerProperty(Object itemId, Object propertyId) {
-        Item item = getItem(itemId);
-        return item == null ? null : item.getItemProperty(propertyId);
-    }
+		Item item = getItem(itemId);
+		return item == null ? null : item.getItemProperty(propertyId);
+	}
 
-    @Override
+	@Override
 	public Collection<String> getContainerPropertyIds() {
-        return propertyList.getPropertyNames();
-    }
+		return propertyList.getPropertyNames();
+	}
 
-    /**
-     * Method used by {@link EntityItem} to gain access to the property list.
-     * Not to be used by clients directly.
-     * 
-     * @return the property list.
-     */
-    PropertyList<T> getPropertyList() {
-        // TODO Not sure whether this is a good idea, maybe the property list
-        // could be passed to EntityItem as a constructor parameter?
-        return propertyList;
-    }
+	/**
+	 * Method used by {@link EntityItem} to gain access to the property list.
+	 * Not to be used by clients directly.
+	 * 
+	 * @return the property list.
+	 */
+	PropertyList<T> getPropertyList() {
+		// TODO Not sure whether this is a good idea, maybe the property list
+		// could be passed to EntityItem as a constructor parameter?
+		return propertyList;
+	}
 
-    /**
-     * {@inheritDoc }
-     * <p>
-     * Please note, that this method will create a new instance of
-     * {@link EntityItem} upon every execution. That is, two subsequent calls to
-     * this method with the same <code>itemId</code> will <b>not</b> return the
-     * same {@link EntityItem} instance. The actual entity instance may still be
-     * the same though, depending on the implementation of the entity provider.
-     */
-    @Override
+	/**
+	 * {@inheritDoc }
+	 * <p>
+	 * Please note, that this method will create a new instance of
+	 * {@link EntityItem} upon every execution. That is, two subsequent calls to
+	 * this method with the same <code>itemId</code> will <b>not</b> return the
+	 * same {@link EntityItem} instance. The actual entity instance may still be
+	 * the same though, depending on the implementation of the entity provider.
+	 */
+	@Override
 	public EntityItem<T> getItem(Object itemId) {
-        if (itemId == null) {
-            return null;
-        }
-        if (isWriteThrough() || !bufferingDelegate.isModified()) {
-            T entity = doGetEntityProvider().getEntity(this, itemId);
-            return entity != null ? new JPAContainerItem<T>(this, entity)
-                    : null;
-        } else {
-            if (bufferingDelegate.isAdded(itemId)) {
-                JPAContainerItem<T> item = new JPAContainerItem<T>(this,
-                        bufferingDelegate.getAddedEntity(itemId), itemId, false);
-                return item;
-            } else if (bufferingDelegate.isUpdated(itemId)) {
-                JPAContainerItem<T> item = new JPAContainerItem<T>(this,
-                        bufferingDelegate.getUpdatedEntity(itemId));
-                item.setDirty(true);
-                return item;
-            } else if (bufferingDelegate.isDeleted(itemId)) {
-                T entity = doGetEntityProvider().getEntity(this, itemId);
-                if (entity != null) {
-                    JPAContainerItem<T> item = new JPAContainerItem<T>(this,
-                            entity);
-                    item.setDeleted(true);
-                    return item;
-                } else {
-                    return null;
-                }
-            } else {
-                T entity = doGetEntityProvider().getEntity(this, itemId);
-                return entity != null ? new JPAContainerItem<T>(this, entity)
-                        : null;
-            }
-        }
-    }
+		if (itemId == null) {
+			return null;
+		}
+		if (isWriteThrough() || !bufferingDelegate.isModified()) {
+			T entity = doGetEntityProvider().getEntity(this, itemId);
+			return entity != null ? new JPAContainerItem<T>(this, entity)
+					: null;
+		} else {
+			if (bufferingDelegate.isAdded(itemId)) {
+				JPAContainerItem<T> item = new JPAContainerItem<T>(this,
+						bufferingDelegate.getAddedEntity(itemId), itemId, false);
+				return item;
+			} else if (bufferingDelegate.isUpdated(itemId)) {
+				JPAContainerItem<T> item = new JPAContainerItem<T>(this,
+						bufferingDelegate.getUpdatedEntity(itemId));
+				item.setDirty(true);
+				return item;
+			} else if (bufferingDelegate.isDeleted(itemId)) {
+				T entity = doGetEntityProvider().getEntity(this, itemId);
+				if (entity != null) {
+					JPAContainerItem<T> item = new JPAContainerItem<T>(this,
+							entity);
+					item.setDeleted(true);
+					return item;
+				} else {
+					return null;
+				}
+			} else {
+				T entity = doGetEntityProvider().getEntity(this, itemId);
+				return entity != null ? new JPAContainerItem<T>(this, entity)
+						: null;
+			}
+		}
+	}
 
-    /**
-     * Called by JPAContainerItem when item is created. Container can then keep
-     * (weak) references to all instantiated items. Those are needed e.g. for
-     * property value changes to happen correctly.
-     * 
-     * @param item
-     */
-    void registerItem(JPAContainerItem<T> item) {
-        // TODO write tests to ensure the registry gets cleaned up properly
+	/**
+	 * Called by JPAContainerItem when item is created. Container can then keep
+	 * (weak) references to all instantiated items. Those are needed e.g. for
+	 * property value changes to happen correctly.
+	 * 
+	 * @param item
+	 */
+	void registerItem(JPAContainerItem<T> item) {
+		// TODO write tests to ensure the registry gets cleaned up properly
 		if (item.getItemId() != null) {
 			synchronized (getItemRegistry()) {
-	            doItemRegistryCleanup();
-	            LinkedList<WeakReference<JPAContainerItem<T>>> listOfItemsForEntity = getItemRegistry()
-	                    .get(item.getItemId());
-	            if (listOfItemsForEntity == null) {
-	                listOfItemsForEntity = new LinkedList<WeakReference<JPAContainerItem<T>>>();
+				doItemRegistryCleanup();
+				LinkedList<WeakReference<JPAContainerItem<T>>> listOfItemsForEntity = getItemRegistry()
+						.get(item.getItemId());
+				if (listOfItemsForEntity == null) {
+					listOfItemsForEntity = new LinkedList<WeakReference<JPAContainerItem<T>>>();
 						getItemRegistry().put(item.getItemId(),
 								listOfItemsForEntity);
-	            }
+				}
 				listOfItemsForEntity
 							.add(new WeakReference<JPAContainerItem<T>>(item));
 			}
-        }
-    }
+		}
+	}
 
-    protected HashMap<Object, LinkedList<WeakReference<JPAContainerItem<T>>>> getItemRegistry() {
-        if (itemRegistry == null) {
-            itemRegistry = new HashMap<Object, LinkedList<WeakReference<JPAContainerItem<T>>>>();
-        }
-        return itemRegistry;
-    }
+	protected HashMap<Object, LinkedList<WeakReference<JPAContainerItem<T>>>> getItemRegistry() {
+		if (itemRegistry == null) {
+			itemRegistry = new HashMap<Object, LinkedList<WeakReference<JPAContainerItem<T>>>>();
+		}
+		return itemRegistry;
+	}
 
-    private void doItemRegistryCleanup() {
-        final boolean cleanup = (cleanupCount++) % CLEANUPRATE == 0;
-        if (cleanup) {
+	private void doItemRegistryCleanup() {
+		final boolean cleanup = (cleanupCount++) % CLEANUPRATE == 0;
+		if (cleanup) {
 			Iterator<Entry<Object, LinkedList<WeakReference<JPAContainerItem<T>>>>> entryIterator = getItemRegistry()
 					.entrySet().iterator();
 			while (entryIterator.hasNext()) {
 				Entry<Object, LinkedList<WeakReference<JPAContainerItem<T>>>> entry = entryIterator
 						.next();
-				Object id = entry.getKey();
 				LinkedList<WeakReference<JPAContainerItem<T>>> linkedList = entry
 						.getValue();
 				for (Iterator<WeakReference<JPAContainerItem<T>>> itemsIterator = linkedList
 						.iterator(); itemsIterator.hasNext();) {
 					WeakReference<JPAContainerItem<T>> ref = itemsIterator
 							.next();
-                    if (ref.get() == null) {
+					if (ref.get() == null) {
 						itemsIterator.remove();
-                    }
-                }
-                if (linkedList.isEmpty()) {
+					}
+				}
+				if (linkedList.isEmpty()) {
 					entryIterator.remove();
-                }
-            }
-        }
-    }
+				}
+			}
+		}
+	}
 
-    /**
-     * <strong>This impementation does not use lazy loading and performs bad
-     * when the number of items is large! Do not use unless you absolutely have
-     * to!</strong>
-     * <p>
-     * {@inheritDoc }
-     */
-    @Override
+	/**
+	 * <strong>This impementation does not use lazy loading and performs bad
+	 * when the number of items is large! Do not use unless you absolutely have
+	 * to!</strong>
+	 * <p>
+	 * {@inheritDoc }
+	 */
+	@Override
 	public Collection<Object> getItemIds() {
-        Collection<Object> ids = getEntityProvider().getAllEntityIdentifiers(
-                this, getAppliedFiltersAsConjunction(), getSortByList());
-        if (isWriteThrough() || !bufferingDelegate.isModified()) {
-            return ids;
-        } else {
-            List<Object> newIds = new LinkedList<Object>();
-            newIds.addAll(ids);
-            newIds.addAll(bufferingDelegate.getAddedItemIds());
-            newIds.removeAll(bufferingDelegate.getDeletedItemIds());
-            return Collections.unmodifiableCollection(newIds);
-        }
-    }
+		Collection<Object> ids = getEntityProvider().getAllEntityIdentifiers(
+				this, getAppliedFiltersAsConjunction(), getSortByList());
+		if (isWriteThrough() || !bufferingDelegate.isModified()) {
+			return ids;
+		} else {
+			List<Object> newIds = new LinkedList<Object>();
+			newIds.addAll(ids);
+			newIds.addAll(bufferingDelegate.getAddedItemIds());
+			newIds.removeAll(bufferingDelegate.getDeletedItemIds());
+			return Collections.unmodifiableCollection(newIds);
+		}
+	}
 
-    @Override
+	@Override
 	public EntityItem<T> createEntityItem(T entity) {
-        return new JPAContainerItem<T>(this, entity, null, false);
-    }
+		return new JPAContainerItem<T>(this, entity, null, false);
+	}
 
-    @Override
+	@Override
 	public Class<?> getType(Object propertyId) {
-        assert propertyId != null : "propertyId must not be null";
-        return propertyList.getPropertyType(propertyId.toString());
-    }
+		assert propertyId != null : "propertyId must not be null";
+		return propertyList.getPropertyType(propertyId.toString());
+	}
 
-    @Override
+	@Override
 	public boolean removeContainerProperty(Object propertyId)
-            throws UnsupportedOperationException {
-        assert propertyId != null : "propertyId must not be null";
-        boolean result = propertyList.removeProperty(propertyId.toString());
-        updateFilterablePropertyIds();
-        return result;
-    }
+			throws UnsupportedOperationException {
+		assert propertyId != null : "propertyId must not be null";
+		boolean result = propertyList.removeProperty(propertyId.toString());
+		updateFilterablePropertyIds();
+		return result;
+	}
 
-    @Override
+	@Override
 	public int size() {
-        int origSize = doGetEntityProvider().getEntityCount(this,
-                getAppliedFiltersAsConjunction());
-        if (isWriteThrough()) {
-            return origSize;
-        } else {
-            int newSize = origSize + bufferingDelegate.getAddedItemIds().size()
-                    - bufferingDelegate.getDeletedItemIds().size();
-            return newSize;
-        }
-    }
+		int origSize = doGetEntityProvider().getEntityCount(this,
+				getAppliedFiltersAsConjunction());
+		if (isWriteThrough()) {
+			return origSize;
+		} else {
+			int newSize = origSize + bufferingDelegate.getAddedItemIds().size()
+					- bufferingDelegate.getDeletedItemIds().size();
+			return newSize;
+		}
+	}
 
-    /**
-     * Returns a conjunction (filter1 AND filter2 AND ... AND filterN) of all
-     * the applied filters. If there are no applied filters, this method returns
-     * null.
-     * 
-     * @see #getAppliedFilters()
-     * @return a conjunction filter or null.
-     */
-    protected Filter getAppliedFiltersAsConjunction() {
-        if (getAppliedFilters().isEmpty()) {
-            return null;
-        } else if (getAppliedFilters().size() == 1) {
-            return getAppliedFilters().iterator().next();
-        } else {
-            return new And(CollectionUtil.toArray(Filter.class,
-                    getAppliedFilters()));
-        }
-    }
+	/**
+	 * Returns a conjunction (filter1 AND filter2 AND ... AND filterN) of all
+	 * the applied filters. If there are no applied filters, this method returns
+	 * null.
+	 * 
+	 * @see #getAppliedFilters()
+	 * @return a conjunction filter or null.
+	 */
+	protected Filter getAppliedFiltersAsConjunction() {
+		if (getAppliedFilters().isEmpty()) {
+			return null;
+		} else if (getAppliedFilters().size() == 1) {
+			return getAppliedFilters().iterator().next();
+		} else {
+			return new And(CollectionUtil.toArray(Filter.class,
+					getAppliedFilters()));
+		}
+	}
 
-    @Override
+	@Override
 	public Collection<Object> getFilterablePropertyIds() {
-        return filterSupport.getFilterablePropertyIds();
-    }
+		return filterSupport.getFilterablePropertyIds();
+	}
 
-    @Override
+	@Override
 	public boolean isFilterable(Object propertyId) {
-        return filterSupport.isFilterable(propertyId);
-    }
+		return filterSupport.isFilterable(propertyId);
+	}
 
-    @Override
+	@Override
 	public List<Filter> getFilters() {
-        return filterSupport.getFilters();
-    }
+		return filterSupport.getFilters();
+	}
 
-    @Override
+	@Override
 	public List<Filter> getAppliedFilters() {
-        return filterSupport.getAppliedFilters();
-    }
+		return filterSupport.getAppliedFilters();
+	}
 
-    @Override
+	@Override
 	public void setApplyFiltersImmediately(boolean applyFiltersImmediately) {
-        filterSupport.setApplyFiltersImmediately(applyFiltersImmediately);
-    }
+		filterSupport.setApplyFiltersImmediately(applyFiltersImmediately);
+	}
 
-    @Override
+	@Override
 	public boolean isApplyFiltersImmediately() {
-        return filterSupport.isApplyFiltersImmediately();
-    }
+		return filterSupport.isApplyFiltersImmediately();
+	}
 
-    @Override
+	@Override
 	public void applyFilters() {
-        filterSupport.applyFilters();
-    }
+		filterSupport.applyFilters();
+	}
 
-    @Override
+	@Override
 	public boolean hasUnappliedFilters() {
-        return filterSupport.hasUnappliedFilters();
-    }
+		return filterSupport.hasUnappliedFilters();
+	}
 
-    @Override
+	@Override
 	public void addContainerFilter(Object propertyId, String filterString,
-            boolean ignoreCase, boolean onlyMatchPrefix) {
-        addContainerFilter(new SimpleStringFilter(propertyId, filterString,
-                ignoreCase, onlyMatchPrefix));
-        if (!isApplyFiltersImmediately()) {
-            applyFilters();
-        }
-    }
+			boolean ignoreCase, boolean onlyMatchPrefix) {
+		addContainerFilter(new SimpleStringFilter(propertyId, filterString,
+				ignoreCase, onlyMatchPrefix));
+		if (!isApplyFiltersImmediately()) {
+			applyFilters();
+		}
+	}
 
-    @Override
+	@Override
 	public void removeAllContainerFilters() {
-        filterSupport.removeAllFilters();
-    }
+		filterSupport.removeAllFilters();
+	}
 
-    @Override
+	@Override
 	public void removeContainerFilters(Object propertyId) {
-        removeAllContainerFilters();
-        applyFilters();
-    }
+		removeAllContainerFilters();
+		applyFilters();
+	}
 
-    /**
-     * {@inheritDoc}
-     * 
-     * <p>
-     * <strong>Note</strong> that JPAContainer don't support custom
-     * {@link Filter}s as filtering is done on DB level. Only basic Filter
-     * implementations are supported. If more complex filtering is needed,
-     * developers should tend to {@link QueryModifierDelegate} that allows
-     * developers to use JPA Criteria API to modify queries.
-     * 
-     * @see com.vaadin.data.Container.Filterable#addContainerFilter(com.vaadin.data.Container.Filter)
-     */
-    @Override
+	/**
+	 * {@inheritDoc}
+	 * 
+	 * <p>
+	 * <strong>Note</strong> that JPAContainer don't support custom
+	 * {@link Filter}s as filtering is done on DB level. Only basic Filter
+	 * implementations are supported. If more complex filtering is needed,
+	 * developers should tend to {@link QueryModifierDelegate} that allows
+	 * developers to use JPA Criteria API to modify queries.
+	 * 
+	 * @see com.vaadin.data.Container.Filterable#addContainerFilter(com.vaadin.data.Container.Filter)
+	 */
+	@Override
 	public void addContainerFilter(Filter filter)
-            throws UnsupportedFilterException {
-        filterSupport.addFilter(filter);
-    }
+			throws UnsupportedFilterException {
+		filterSupport.addFilter(filter);
+	}
 
-    @Override
+	@Override
 	public void removeContainerFilter(Filter filter) {
-        filterSupport.removeFilter(filter);
-    }
+		filterSupport.removeFilter(filter);
+	}
 
-    /**
-     * <strong>This functionality is not supported by this
-     * implementation.</strong>
-     * <p>
-     * {@inheritDoc }
-     */
-    @Override
+	/**
+	 * <strong>This functionality is not supported by this
+	 * implementation.</strong>
+	 * <p>
+	 * {@inheritDoc }
+	 */
+	@Override
 	public Object addItemAt(int index) throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
-    }
+		throw new UnsupportedOperationException();
+	}
 
-    /**
-     * <strong>This functionality is not supported by this
-     * implementation.</strong>
-     * <p>
-     * {@inheritDoc }
-     */
-    @Override
+	/**
+	 * <strong>This functionality is not supported by this
+	 * implementation.</strong>
+	 * <p>
+	 * {@inheritDoc }
+	 */
+	@Override
 	public Item addItemAt(int index, Object newItemId)
-            throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
-    }
+			throws UnsupportedOperationException {
+		throw new UnsupportedOperationException();
+	}
 
-    @Override
+	@Override
 	public Object getIdByIndex(int index) {
-        if (isWriteThrough()) {
-            return doGetEntityProvider().getEntityIdentifierAt(this,
-                    getAppliedFiltersAsConjunction(), getSortByList(), index);
-        } else {
-            int addedItems = bufferingDelegate.getAddedItemIds().size();
-            if (index < addedItems) {
-                return bufferingDelegate.getAddedItemIds().get(index);
-            } else {
-                index -= addedItems;
-                index = bufferingDelegate.fixDbIndexWithDeletedItems(index);
-                Object itemId = doGetEntityProvider().getEntityIdentifierAt(
-                        this, getAppliedFiltersAsConjunction(),
-                        getSortByList(), index);
-                return itemId;
-            }
-        }
-    }
+		if (isWriteThrough()) {
+			return doGetEntityProvider().getEntityIdentifierAt(this,
+					getAppliedFiltersAsConjunction(), getSortByList(), index);
+		} else {
+			int addedItems = bufferingDelegate.getAddedItemIds().size();
+			if (index < addedItems) {
+				return bufferingDelegate.getAddedItemIds().get(index);
+			} else {
+				index -= addedItems;
+				index = bufferingDelegate.fixDbIndexWithDeletedItems(index);
+				Object itemId = doGetEntityProvider().getEntityIdentifierAt(
+						this, getAppliedFiltersAsConjunction(),
+						getSortByList(), index);
+				return itemId;
+			}
+		}
+	}
 
-    /**
-     * <strong>This implementation does not use lazy loading and performs
-     * <b>extremely</b> bad when the number of items is large! Do not use unless
-     * you absolutely have to!</strong>
-     * <p>
-     * {@inheritDoc }
-     */
-    @Override
+	/**
+	 * <strong>This implementation does not use lazy loading and performs
+	 * <b>extremely</b> bad when the number of items is large! Do not use unless
+	 * you absolutely have to!</strong>
+	 * <p>
+	 * {@inheritDoc }
+	 */
+	@Override
 	public int indexOfId(Object itemId) {
-        /*
-         * This is intentionally an ugly implementation! This method should not
-         * be used!
-         */
-        int size = size();
-        if (size > 100) {
-            Logger.getLogger(getClass().getName())
-                    .warning(
-                            "(JPAContainer) WARNING! Invoking indexOfId() when size > 100 is not recommended!");
-        }
-        for (int i = 0; i < size; i++) {
-            Object id = getIdByIndex(i);
-            if (id == null) {
-                return -1;
-            } else if (id.equals(itemId)) {
-                if (!isWriteThrough() && bufferingDelegate.isDeleted(id)) {
-                    return -1;
-                }
-                return i;
-            }
-        }
-        return -1;
-    }
+		/*
+		 * This is intentionally an ugly implementation! This method should not
+		 * be used!
+		 */
+		int size = size();
+		if (size > 100) {
+			Logger.getLogger(getClass().getName())
+					.warning(
+							"(JPAContainer) WARNING! Invoking indexOfId() when size > 100 is not recommended!");
+		}
+		for (int i = 0; i < size; i++) {
+			Object id = getIdByIndex(i);
+			if (id == null) {
+				return -1;
+			} else if (id.equals(itemId)) {
+				if (!isWriteThrough() && bufferingDelegate.isDeleted(id)) {
+					return -1;
+				}
+				return i;
+			}
+		}
+		return -1;
+	}
 
-    /**
-     * Checks that the container is writable, i.e. the entity provider
-     * implements the {@link MutableEntityProvider} interface and the container
-     * is not marked as read only.
-     * 
-     * @throws IllegalStateException
-     *             if the container is read only.
-     * @throws UnsupportedOperationException
-     *             if the entity provider does not support editing.
-     */
-    protected void requireWritableContainer() throws IllegalStateException,
-            UnsupportedOperationException {
-        if (!(entityProvider instanceof MutableEntityProvider)) {
-            throw new UnsupportedOperationException(
-                    "EntityProvider does not support editing");
-        }
-        if (readOnly) {
-            throw new IllegalStateException("Container is read only");
-        }
-    }
+	/**
+	 * Checks that the container is writable, i.e. the entity provider
+	 * implements the {@link MutableEntityProvider} interface and the container
+	 * is not marked as read only.
+	 * 
+	 * @throws IllegalStateException
+	 *             if the container is read only.
+	 * @throws UnsupportedOperationException
+	 *             if the entity provider does not support editing.
+	 */
+	protected void requireWritableContainer() throws IllegalStateException,
+			UnsupportedOperationException {
+		if (!(entityProvider instanceof MutableEntityProvider)) {
+			throw new UnsupportedOperationException(
+					"EntityProvider does not support editing");
+		}
+		if (readOnly) {
+			throw new IllegalStateException("Container is read only");
+		}
+	}
 
-    @Override
+	@Override
 	public Object addEntity(T entity) throws UnsupportedOperationException,
-            IllegalStateException {
-        assert entity != null : "entity must not be null";
-        requireWritableContainer();
+			IllegalStateException {
+		assert entity != null : "entity must not be null";
+		requireWritableContainer();
 
-        Object id;
-        if (isWriteThrough()) {
-            T result = ((MutableEntityProvider<T>) getEntityProvider())
-                    .addEntity(entity);
-            id = getIdentifierPropertyValue(result);
-        } else {
-            id = bufferingDelegate.addEntity(entity);
-        }
-        setFireItemSetChangeOnProviderChange(false); // Prevent the container
-        // from firing duplicate
-        // events
-        try {
-            fireContainerItemSetChange(new ItemAddedEvent(id));
-        } finally {
-            setFireItemSetChangeOnProviderChange(true);
-        }
-        return id;
-    }
-    
-    protected Object getIdentifierPropertyValue(T entity) {
-    	return getEntityClassMetadata().getPropertyValue(entity,
-                getEntityClassMetadata().getIdentifierProperty().getName());
-    }
+		Object id;
+		if (isWriteThrough()) {
+			T result = ((MutableEntityProvider<T>) getEntityProvider())
+					.addEntity(entity);
+			id = getIdentifierPropertyValue(result);
+		} else {
+			id = bufferingDelegate.addEntity(entity);
+		}
+		setFireItemSetChangeOnProviderChange(false); // Prevent the container
+		// from firing duplicate
+		// events
+		try {
+			fireContainerItemSetChange(new ItemAddedEvent(id));
+		} finally {
+			setFireItemSetChangeOnProviderChange(true);
+		}
+		return id;
+	}
+	
+	protected Object getIdentifierPropertyValue(T entity) {
+		return getEntityClassMetadata().getPropertyValue(entity,
+				getEntityClassMetadata().getIdentifierProperty().getName());
+	}
 
-    /**
-     * <strong>This feature is not well optimized. Using direct access to db is
-     * much faster.</strong>
-     * <p>
-     * {@inheritDoc }
-     */
-    @Override
+	/**
+	 * <strong>This feature is not well optimized. Using direct access to db is
+	 * much faster.</strong>
+	 * <p>
+	 * {@inheritDoc }
+	 */
+	@Override
 	public boolean removeAllItems() {
-        try {
-            Collection<Object> itemIds = getItemIds();
-            for (Object id : itemIds) {
-                removeItem(id);
-            }
-            if (!isWriteThrough()) {
-                commit();
-            }
-        } catch (Exception e) {
-            return false;
-        }
-        return true;
-    }
+		try {
+			Collection<Object> itemIds = getItemIds();
+			for (Object id : itemIds) {
+				removeItem(id);
+			}
+			if (!isWriteThrough()) {
+				commit();
+			}
+		} catch (Exception e) {
+			return false;
+		}
+		return true;
+	}
 
-    @Override
+	@Override
 	public boolean removeItem(Object itemId)
-            throws UnsupportedOperationException {
-        assert itemId != null : "itemId must not be null";
-        requireWritableContainer();
+			throws UnsupportedOperationException {
+		assert itemId != null : "itemId must not be null";
+		requireWritableContainer();
 
-        if (isWriteThrough()) {
-            if (getEntityProvider().containsEntity(this, itemId, null)) {
-                ((MutableEntityProvider<T>) getEntityProvider())
-                        .removeEntity(itemId);
-                setFireItemSetChangeOnProviderChange(false);
-                try {
-                    fireContainerItemSetChange(new ItemRemovedEvent(itemId));
-                } finally {
-                    setFireItemSetChangeOnProviderChange(true);
-                }
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            if (bufferingDelegate.isAdded(itemId)
-                    || getEntityProvider().containsEntity(this, itemId, null)) {
-                bufferingDelegate.deleteItem(itemId);
-                setFireItemSetChangeOnProviderChange(false);
-                try {
-                    fireContainerItemSetChange(new ItemRemovedEvent(itemId));
-                } finally {
-                    setFireItemSetChangeOnProviderChange(true);
-                }
-                return true;
-            } else {
-                return false;
-            }
-        }
-    }
+		if (isWriteThrough()) {
+			if (getEntityProvider().containsEntity(this, itemId, null)) {
+				((MutableEntityProvider<T>) getEntityProvider())
+						.removeEntity(itemId);
+				setFireItemSetChangeOnProviderChange(false);
+				try {
+					fireContainerItemSetChange(new ItemRemovedEvent(itemId));
+				} finally {
+					setFireItemSetChangeOnProviderChange(true);
+				}
+				return true;
+			} else {
+				return false;
+			}
+		} else {
+			if (bufferingDelegate.isAdded(itemId)
+					|| getEntityProvider().containsEntity(this, itemId, null)) {
+				bufferingDelegate.deleteItem(itemId);
+				setFireItemSetChangeOnProviderChange(false);
+				try {
+					fireContainerItemSetChange(new ItemRemovedEvent(itemId));
+				} finally {
+					setFireItemSetChangeOnProviderChange(true);
+				}
+				return true;
+			} else {
+				return false;
+			}
+		}
+	}
 
-    /**
-     * This method is used by the {@link JPAContainerItem} class and <b>should
-     * not be used by other classes</b>. It is only called when the item is in
-     * write through mode, i.e. when an updated property value is directly
-     * reflected in the backed entity instance. If the item is in buffered mode
-     * (write through is off), {@link #containerItemModified(JPAContainerItem)}
-     * is used instead.
-     * <p>
-     * This method notifies the container that the specified property of
-     * <code>item</code> has been modified. The container will then take
-     * appropriate actions to pass the changes on to the entity provider,
-     * depending on the state of the <code>writeThrough</code> property <i>of
-     * the container</i>.
-     * <p>
-     * If <code>item</code> has no item ID ({@link JPAContainerItem#getItemId() }
-     * ), this method does nothing.
-     * 
-     * @see #isWriteThrough()
-     * @param item
-     *            the item that has been modified (must not be null).
-     * @param propertyId
-     *            the ID of the modified property (must not be null).
-     */
-    void containerItemPropertyModified(JPAContainerItem<T> item,
-            String propertyId) {
-        assert item != null : "item must not be null";
-        assert propertyId != null : "propertyId must not be null";
+	/**
+	 * This method is used by the {@link JPAContainerItem} class and <b>should
+	 * not be used by other classes</b>. It is only called when the item is in
+	 * write through mode, i.e. when an updated property value is directly
+	 * reflected in the backed entity instance. If the item is in buffered mode
+	 * (write through is off), {@link #containerItemModified(JPAContainerItem)}
+	 * is used instead.
+	 * <p>
+	 * This method notifies the container that the specified property of
+	 * <code>item</code> has been modified. The container will then take
+	 * appropriate actions to pass the changes on to the entity provider,
+	 * depending on the state of the <code>writeThrough</code> property <i>of
+	 * the container</i>.
+	 * <p>
+	 * If <code>item</code> has no item ID ({@link JPAContainerItem#getItemId() }
+	 * ), this method does nothing.
+	 * 
+	 * @see #isWriteThrough()
+	 * @param item
+	 *            the item that has been modified (must not be null).
+	 * @param propertyId
+	 *            the ID of the modified property (must not be null).
+	 */
+	void containerItemPropertyModified(JPAContainerItem<T> item,
+			String propertyId) {
+		assert item != null : "item must not be null";
+		assert propertyId != null : "propertyId must not be null";
 
-        if (item.getItemId() != null) {
+		if (item.getItemId() != null) {
 
-            requireWritableContainer();
+			requireWritableContainer();
 
-            Object itemId = item.getItemId();
-            if (isWriteThrough()) {
-                ((MutableEntityProvider<T>) getEntityProvider())
-                        .updateEntityProperty(itemId, propertyId, item
-                                .getItemProperty(propertyId).getValue());
-                item.setDirty(false);
-            } else {
-                bufferingDelegate.updateEntity(itemId, item.getEntity());
-            }
-        }
-    }
+			Object itemId = item.getItemId();
+			if (isWriteThrough()) {
+				((MutableEntityProvider<T>) getEntityProvider())
+						.updateEntityProperty(itemId, propertyId, item
+								.getItemProperty(propertyId).getValue());
+				item.setDirty(false);
+			} else {
+				bufferingDelegate.updateEntity(itemId, item.getEntity());
+			}
+		}
+	}
 
-    /**
-     * This method is used by the {@link JPAContainerItem} class and <b>should
-     * not be used by other classes</b>. It is only called when the item is in
-     * buffered mode (write through is off), i.e. when updated property values
-     * are not reflected in the backend entity instance until the item's commit
-     * method has been invoked. If write through is turned on,
-     * {@link #containerItemPropertyModified(JPAContainerItem, String)} is used
-     * instead.
-     * <p>
-     * This method notifies the container that the specified <code>item</code>
-     * has been modified. The container will then take appropriate actions to
-     * pass the changes on to the entity provider, depending on the state of the
-     * <code>writeThrough</code> property <i>of the container</i>.
-     * <p>
-     * If <code>item</code> has no item ID ({@link JPAContainerItem#getItemId() }
-     * ), this method does nothing.
-     * 
-     * @see #isWriteThrough()
-     * @param item
-     *            the item that has been modified (must not be null).
-     */
-    void containerItemModified(JPAContainerItem<T> item) {
-        assert item != null : "item must not be null";
+	/**
+	 * This method is used by the {@link JPAContainerItem} class and <b>should
+	 * not be used by other classes</b>. It is only called when the item is in
+	 * buffered mode (write through is off), i.e. when updated property values
+	 * are not reflected in the backend entity instance until the item's commit
+	 * method has been invoked. If write through is turned on,
+	 * {@link #containerItemPropertyModified(JPAContainerItem, String)} is used
+	 * instead.
+	 * <p>
+	 * This method notifies the container that the specified <code>item</code>
+	 * has been modified. The container will then take appropriate actions to
+	 * pass the changes on to the entity provider, depending on the state of the
+	 * <code>writeThrough</code> property <i>of the container</i>.
+	 * <p>
+	 * If <code>item</code> has no item ID ({@link JPAContainerItem#getItemId() }
+	 * ), this method does nothing.
+	 * 
+	 * @see #isWriteThrough()
+	 * @param item
+	 *            the item that has been modified (must not be null).
+	 */
+	void containerItemModified(JPAContainerItem<T> item) {
+		assert item != null : "item must not be null";
 
-        if (item.getItemId() != null) {
-            requireWritableContainer();
+		if (item.getItemId() != null) {
+			requireWritableContainer();
 
-            Object itemId = item.getItemId();
-            if (isWriteThrough()) {
-                ((MutableEntityProvider<T>) getEntityProvider())
-                        .updateEntity(item.getEntity());
-                item.setDirty(false);
-            } else {
-                bufferingDelegate.updateEntity(itemId, item.getEntity());
-            }
-        }
-    }
+			Object itemId = item.getItemId();
+			if (isWriteThrough()) {
+				((MutableEntityProvider<T>) getEntityProvider())
+						.updateEntity(item.getEntity());
+				item.setDirty(false);
+			} else {
+				bufferingDelegate.updateEntity(itemId, item.getEntity());
+			}
+		}
+	}
 
-    @Override
+	@Override
 	public void commit() throws SourceException, InvalidValueException {
-        if (!isWriteThrough() && isModified()) {
+		if (!isWriteThrough() && isModified()) {
 			if (writeThrough.size() > MAX_NESTED_COMMITS) {
 				throw new IllegalStateException(
 						"commit() has been called recursively 5 time within commit execution");
 			}
 			writeThrough.push(true);
 			try {
-            bufferingDelegate.commit();
-            setFireItemSetChangeOnProviderChange(false);
-            try {
-                fireContainerItemSetChange(new ChangesCommittedEvent());
-            } finally {
-                setFireItemSetChangeOnProviderChange(true);
-            }
+			bufferingDelegate.commit();
+			setFireItemSetChangeOnProviderChange(false);
+			try {
+				fireContainerItemSetChange(new ChangesCommittedEvent());
+			} finally {
+				setFireItemSetChangeOnProviderChange(true);
+			}
 			} finally {
 				boolean wt = writeThrough.pop();
 				if (wt != true) {
 					throw new IllegalStateException(
 							"During a commit writeThrough is true and now (at the end of the commit) it is false,"
 									+ " so someone has modified it without returning it to false");
-        }
-    }
+		}
+	}
 		}
 	}
 
-    @Override
+	@Override
 	public void discard() throws SourceException {
-        if (!isWriteThrough() && isModified()) {
-            bufferingDelegate.discard();
-            setFireItemSetChangeOnProviderChange(false);
-            try {
-                fireContainerItemSetChange(new ChangesDiscardedEvent());
-            } finally {
-                setFireItemSetChangeOnProviderChange(true);
-            }
-        }
-    }
+		if (!isWriteThrough() && isModified()) {
+			bufferingDelegate.discard();
+			setFireItemSetChangeOnProviderChange(false);
+			try {
+				fireContainerItemSetChange(new ChangesDiscardedEvent());
+			} finally {
+				setFireItemSetChangeOnProviderChange(true);
+			}
+		}
+	}
 
-    @Override
+	@Override
 	public boolean isModified() {
-        if (isWriteThrough()) {
-            return false;
-        } else {
-            return bufferingDelegate.isModified();
-        }
-    }
+		if (isWriteThrough()) {
+			return false;
+		} else {
+			return bufferingDelegate.isModified();
+		}
+	}
 
-    public boolean isReadThrough() {
-        EntityProvider<T> ep = doGetEntityProvider();
-        if (ep instanceof CachingEntityProvider) {
-            return !((CachingEntityProvider<T>) ep).isCacheEnabled();
-        }
-        return true; // There is no cache at all
-    }
+	public boolean isReadThrough() {
+		EntityProvider<T> ep = doGetEntityProvider();
+		if (ep instanceof CachingEntityProvider) {
+			return !((CachingEntityProvider<T>) ep).isCacheEnabled();
+		}
+		return true; // There is no cache at all
+	}
 
-    public boolean isWriteThrough() {
-        return !(doGetEntityProvider() instanceof BatchableEntityProvider)
+	public boolean isWriteThrough() {
+		return !(doGetEntityProvider() instanceof BatchableEntityProvider)
 				|| writeThrough.peek();
-    }
+	}
 
-    /**
-     * <strong>This functionality is not supported by this
-     * implementation.</strong>
-     * <p>
-     * {@inheritDoc }
-     */
-    public void setReadThrough(boolean readThrough) throws SourceException {
-        throw new UnsupportedOperationException();
-    }
+	/**
+	 * <strong>This functionality is not supported by this
+	 * implementation.</strong>
+	 * <p>
+	 * {@inheritDoc }
+	 */
+	public void setReadThrough(boolean readThrough) throws SourceException {
+		throw new UnsupportedOperationException();
+	}
 
-    /**
-     * {@inheritDoc }
-     * <p>
-     * <b>Note</b>, that write-through mode can only be turned off if the entity
-     * provider implements the {@link BatchableEntityProvider} interface.
-     */
-    public void setWriteThrough(boolean writeThrough) throws SourceException,
-            InvalidValueException {
+	/**
+	 * {@inheritDoc }
+	 * <p>
+	 * <b>Note</b>, that write-through mode can only be turned off if the entity
+	 * provider implements the {@link BatchableEntityProvider} interface.
+	 */
+	public void setWriteThrough(boolean writeThrough) throws SourceException,
+			InvalidValueException {
 		if (isWriteThrough() == writeThrough) {
 			return;
 		}
 
-        if (writeThrough) {
-            commit();
+		if (writeThrough) {
+			commit();
 			this.writeThrough.pop();
 			this.writeThrough.push(true);
-        } else {
-            if (doGetEntityProvider() instanceof BatchableEntityProvider) {
+		} else {
+			if (doGetEntityProvider() instanceof BatchableEntityProvider) {
 				this.writeThrough.pop();
 				this.writeThrough.push(false);
-            } else {
-                throw new UnsupportedOperationException(
-                        "EntityProvider is not batchable");
-            }
-        }
-    }
+			} else {
+				throw new UnsupportedOperationException(
+						"EntityProvider is not batchable");
+			}
+		}
+	}
 
-    @Override
+	@Override
 	public void setAutoCommit(boolean autoCommit) throws SourceException,
-            InvalidValueException {
-        setWriteThrough(autoCommit);
-    }
+			InvalidValueException {
+		setWriteThrough(autoCommit);
+	}
 
-    @Override
+	@Override
 	public boolean isAutoCommit() {
-        return isWriteThrough();
-    }
+		return isWriteThrough();
+	}
 
-    private String parentProperty;
+	private String parentProperty;
 
-    private String parentIdProperty;
+	private String parentIdProperty;
 
-    @Override
+	@Override
 	public String getParentProperty() {
-        return parentProperty;
-    }
+		return parentProperty;
+	}
 
-    @Override
+	@Override
 	public void setParentProperty(String parentProperty) {
-        this.parentProperty = parentProperty;
-        if (parentProperty == null) {
-            parentIdProperty = null;
-        } else {
-            StringBuilder sb = new StringBuilder(parentProperty);
-            sb.append('.');
-            sb.append(getEntityClassMetadata().getIdentifierProperty()
-                    .getName());
-            parentIdProperty = sb.toString();
-        }
-    }
+		this.parentProperty = parentProperty;
+		if (parentProperty == null) {
+			parentIdProperty = null;
+		} else {
+			StringBuilder sb = new StringBuilder(parentProperty);
+			sb.append('.');
+			sb.append(getEntityClassMetadata().getIdentifierProperty()
+					.getName());
+			parentIdProperty = sb.toString();
+		}
+	}
 
-    @Override
+	@Override
 	public boolean areChildrenAllowed(Object itemId) {
-        assert itemId != null : "itemId must not be null";
-        return parentProperty != null && containsId(itemId);
-    }
+		assert itemId != null : "itemId must not be null";
+		return parentProperty != null && containsId(itemId);
+	}
 
-    private Filter getChildrenFilter(Object parentId) {
-        Filter parentFilter;
-        if (parentId == null) {
-            parentFilter = new IsNull(parentProperty);
-        } else {
-            parentFilter = new Equal(parentIdProperty, parentId);
-        }
-        Filter appliedFilter = getAppliedFiltersAsConjunction();
-        if (appliedFilter == null) {
-            return parentFilter;
-        } else {
-            return new And(parentFilter, appliedFilter);
-        }
-    }
+	private Filter getChildrenFilter(Object parentId) {
+		Filter parentFilter;
+		if (parentId == null) {
+			parentFilter = new IsNull(parentProperty);
+		} else {
+			parentFilter = new Equal(parentIdProperty, parentId);
+		}
+		Filter appliedFilter = getAppliedFiltersAsConjunction();
+		if (appliedFilter == null) {
+			return parentFilter;
+		} else {
+			return new And(parentFilter, appliedFilter);
+		}
+	}
 
-    @Override
+	@Override
 	public Collection<?> getChildren(Object itemId) {
-        if (getParentProperty() == null) {
-            if (itemId == null) {
-                return getItemIds();
-            } else {
-                return Collections.emptyList();
-            }
-        } else {
-            return doGetEntityProvider().getAllEntityIdentifiers(this,
-                    getChildrenFilter(itemId), getSortByList());
-        }
-    }
+		if (getParentProperty() == null) {
+			if (itemId == null) {
+				return getItemIds();
+			} else {
+				return Collections.emptyList();
+			}
+		} else {
+			return doGetEntityProvider().getAllEntityIdentifiers(this,
+					getChildrenFilter(itemId), getSortByList());
+		}
+	}
 
-    @Override
+	@Override
 	public Object getParent(Object itemId) {
-        if (parentProperty == null) {
-            return null;
-        } else {
-            EntityItem<T> item = getItem(itemId);
-            @SuppressWarnings("unchecked")
-            T parent = item == null ? null : (T) item.getItemProperty(
-                    parentProperty).getValue();
-            if (parent == null) {
-                return null;
-            } else {
-                return getIdentifierPropertyValue(parent);
-            }
-        }
-    }
+		if (parentProperty == null) {
+			return null;
+		} else {
+			EntityItem<T> item = getItem(itemId);
+			@SuppressWarnings("unchecked")
+			T parent = item == null ? null : (T) item.getItemProperty(
+					parentProperty).getValue();
+			if (parent == null) {
+				return null;
+			} else {
+				return getIdentifierPropertyValue(parent);
+			}
+		}
+	}
 
-    @Override
+	@Override
 	public boolean hasChildren(Object itemId) {
-        return !getChildren(itemId).isEmpty();
-    }
+		return !getChildren(itemId).isEmpty();
+	}
 
-    @Override
+	@Override
 	public boolean isRoot(Object itemId) {
-        return getParent(itemId) == null;
-    }
+		return getParent(itemId) == null;
+	}
 
-    @Override
+	@Override
 	public Collection<?> rootItemIds() {
-        return getChildren(null);
-    }
+		return getChildren(null);
+	}
 
-    /**
-     * <strong>This functionality is not supported by this
-     * implementation.</strong>
-     * <p>
-     * {@inheritDoc }
-     */
-    @Override
+	/**
+	 * <strong>This functionality is not supported by this
+	 * implementation.</strong>
+	 * <p>
+	 * {@inheritDoc }
+	 */
+	@Override
 	public boolean setChildrenAllowed(Object itemId, boolean areChildrenAllowed)
-            throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
-    }
+			throws UnsupportedOperationException {
+		throw new UnsupportedOperationException();
+	}
 
-    /**
-     * <strong>This functionality is not supported by this
-     * implementation.</strong>
-     * <p>
-     * {@inheritDoc }
-     */
-    @Override
+	/**
+	 * <strong>This functionality is not supported by this
+	 * implementation.</strong>
+	 * <p>
+	 * {@inheritDoc }
+	 */
+	@Override
 	public boolean setParent(Object itemId, Object newParentId)
-            throws UnsupportedOperationException {
-        throw new UnsupportedOperationException();
-    }
+			throws UnsupportedOperationException {
+		throw new UnsupportedOperationException();
+	}
 
-    /**
-     * Event indicating that the container has been resorted.
-     * 
-     * @author Petter Holmström (Vaadin Ltd)
-     * @since 1.0
-     */
-    public final class ContainerSortedEvent implements ItemSetChangeEvent {
+	/**
+	 * Event indicating that the container has been resorted.
+	 * 
+	 * @author Petter Holmström (Vaadin Ltd)
+	 * @since 1.0
+	 */
+	public final class ContainerSortedEvent implements ItemSetChangeEvent {
 
-        private static final long serialVersionUID = -4330673683011445634L;
+		private static final long serialVersionUID = -4330673683011445634L;
 
-        protected ContainerSortedEvent() {
-        }
+		protected ContainerSortedEvent() {
+		}
 
-        @Override
+		@Override
 		public Container getContainer() {
-            return JPAContainer.this;
-        }
-    }
+			return JPAContainer.this;
+		}
+	}
 
-    /**
-     * Event indicating that the changes have been committed. It will be fired
-     * when the container has write-through/auto-commit turned off and
-     * {@link JPAContainer#commit()} is called.
-     * 
-     * @author Petter Holmström (Vaadin Ltd)
-     * @since 1.0
-     */
-    public final class ChangesCommittedEvent implements ItemSetChangeEvent {
+	/**
+	 * Event indicating that the changes have been committed. It will be fired
+	 * when the container has write-through/auto-commit turned off and
+	 * {@link JPAContainer#commit()} is called.
+	 * 
+	 * @author Petter Holmström (Vaadin Ltd)
+	 * @since 1.0
+	 */
+	public final class ChangesCommittedEvent implements ItemSetChangeEvent {
 
-        private static final long serialVersionUID = -7802570988994951818L;
+		private static final long serialVersionUID = -7802570988994951818L;
 
-        protected ChangesCommittedEvent() {
-        }
+		protected ChangesCommittedEvent() {
+		}
 
-        @Override
+		@Override
 		public Container getContainer() {
-            return JPAContainer.this;
-        }
-    }
+			return JPAContainer.this;
+		}
+	}
 
-    /**
-     * Event indicating that the changes have been discarded. This event is
-     * fired when the container has write-through/auto-commit turned off and
-     * {@link JPAContainer#discard() } is called.
-     * 
-     * @author Petter Holmström (Vaadin Ltd)
-     * @since 1.0
-     */
-    public final class ChangesDiscardedEvent implements ItemSetChangeEvent {
+	/**
+	 * Event indicating that the changes have been discarded. This event is
+	 * fired when the container has write-through/auto-commit turned off and
+	 * {@link JPAContainer#discard() } is called.
+	 * 
+	 * @author Petter Holmström (Vaadin Ltd)
+	 * @since 1.0
+	 */
+	public final class ChangesDiscardedEvent implements ItemSetChangeEvent {
 
-        private static final long serialVersionUID = 1192258036968002982L;
+		private static final long serialVersionUID = 1192258036968002982L;
 
-        protected ChangesDiscardedEvent() {
-        }
+		protected ChangesDiscardedEvent() {
+		}
 
-        @Override
+		@Override
 		public Container getContainer() {
-            return JPAContainer.this;
-        }
-    }
+			return JPAContainer.this;
+		}
+	}
 
-    /**
-     * Event indicating that all the items have been removed from the container.
-     * This event is fired by {@link JPAContainer#removeAllItems() }.
-     * 
-     * @author Petter Holmström (Vaadin Ltd)
-     * @since 1.0
-     */
-    public final class AllItemsRemovedEvent implements ItemSetChangeEvent {
+	/**
+	 * Event indicating that all the items have been removed from the container.
+	 * This event is fired by {@link JPAContainer#removeAllItems() }.
+	 * 
+	 * @author Petter Holmström (Vaadin Ltd)
+	 * @since 1.0
+	 */
+	public final class AllItemsRemovedEvent implements ItemSetChangeEvent {
 
-        private static final long serialVersionUID = -7429226164483121998L;
+		private static final long serialVersionUID = -7429226164483121998L;
 
-        protected AllItemsRemovedEvent() {
-        }
+		protected AllItemsRemovedEvent() {
+		}
 
-        @Override
+		@Override
 		public Container getContainer() {
-            return JPAContainer.this;
-        }
-    }
+			return JPAContainer.this;
+		}
+	}
 
-    /**
-     * Event fired by {@link JPAContainer#containsId(java.lang.Object) } when the
-     * result is false and {@link #isContainsIdFiresItemSetChangeIfNotFound() }
-     * is true.
-     * 
-     * @author Petter Holmström (Vaadin Ltd)
-     * @since 1.0
-     */
-    public final class ItemNotFoundEvent implements ItemSetChangeEvent {
+	/**
+	 * Event fired by {@link JPAContainer#containsId(java.lang.Object) } when the
+	 * result is false and {@link #isContainsIdFiresItemSetChangeIfNotFound() }
+	 * is true.
+	 * 
+	 * @author Petter Holmström (Vaadin Ltd)
+	 * @since 1.0
+	 */
+	public final class ItemNotFoundEvent implements ItemSetChangeEvent {
 
-        private static final long serialVersionUID = 7542676056363040711L;
+		private static final long serialVersionUID = 7542676056363040711L;
 
-        protected ItemNotFoundEvent() {
-        }
+		protected ItemNotFoundEvent() {
+		}
 
-        @Override
+		@Override
 		public Container getContainer() {
-            return JPAContainer.this;
-        }
-    }
+			return JPAContainer.this;
+		}
+	}
 
-    /**
-     * Event fired when a {@link EntityProviderChangeEvent} is received by the
-     * container.
-     * 
-     * @author Petter Holmström (Vaadin Ltd)
-     * @since 1.0
-     */
-    public final class ProviderChangedEvent implements ItemSetChangeEvent {
+	/**
+	 * Event fired when a {@link EntityProviderChangeEvent} is received by the
+	 * container.
+	 * 
+	 * @author Petter Holmström (Vaadin Ltd)
+	 * @since 1.0
+	 */
+	public final class ProviderChangedEvent implements ItemSetChangeEvent {
 
-        private static final long serialVersionUID = -2719424959990430585L;
-        private final EntityProviderChangeEvent<?> event;
+		private static final long serialVersionUID = -2719424959990430585L;
+		private final EntityProviderChangeEvent<?> event;
 
-        protected ProviderChangedEvent(EntityProviderChangeEvent<?> event) {
-            this.event = event;
-        }
+		protected ProviderChangedEvent(EntityProviderChangeEvent<?> event) {
+			this.event = event;
+		}
 
-        @Override
+		@Override
 		public Container getContainer() {
-            return JPAContainer.this;
-        }
+			return JPAContainer.this;
+		}
 
-        /**
-         * Gets the {@link EntityProviderChangeEvent} that caused this container
-         * event to be fired.
-         */
-        public EntityProviderChangeEvent<?> getChangeEvent() {
-            return event;
-        }
-    }
+		/**
+		 * Gets the {@link EntityProviderChangeEvent} that caused this container
+		 * event to be fired.
+		 */
+		public EntityProviderChangeEvent<?> getChangeEvent() {
+			return event;
+		}
+	}
 
-    /**
-     * Abstract base class for events concerning single {@link EntityItem}s.
-     * 
-     * @author Petter Holmström (Vaadin Ltd)
-     * @since 1.0
-     */
-    public abstract class ItemEvent implements ItemSetChangeEvent {
+	/**
+	 * Abstract base class for events concerning single {@link EntityItem}s.
+	 * 
+	 * @author Petter Holmström (Vaadin Ltd)
+	 * @since 1.0
+	 */
+	public abstract class ItemEvent implements ItemSetChangeEvent {
 
-        private static final long serialVersionUID = -7867054889972105067L;
-        protected final Object itemId;
+		private static final long serialVersionUID = -7867054889972105067L;
+		protected final Object itemId;
 
-        protected ItemEvent(Object itemId) {
-            this.itemId = itemId;
-        }
+		protected ItemEvent(Object itemId) {
+			this.itemId = itemId;
+		}
 
-        @Override
+		@Override
 		public Container getContainer() {
-            return JPAContainer.this;
-        }
+			return JPAContainer.this;
+		}
 
-        /**
-         * Gets the ID of the item that this event concerns.
-         * 
-         * @return the item ID.
-         */
-        public Object getItemId() {
-            return itemId;
-        }
-    }
+		/**
+		 * Gets the ID of the item that this event concerns.
+		 * 
+		 * @return the item ID.
+		 */
+		public Object getItemId() {
+			return itemId;
+		}
+	}
 
-    /**
-     * Event indicating that an item has been added to the container. This event
-     * is fired by {@link JPAContainer#addEntity(java.lang.Object) }.
-     * 
-     * @author Petter Holmström (Vaadin Ltd)
-     * @since 1.0
-     */
-    public final class ItemAddedEvent extends ItemEvent {
+	/**
+	 * Event indicating that an item has been added to the container. This event
+	 * is fired by {@link JPAContainer#addEntity(java.lang.Object) }.
+	 * 
+	 * @author Petter Holmström (Vaadin Ltd)
+	 * @since 1.0
+	 */
+	public final class ItemAddedEvent extends ItemEvent {
 
-        private static final long serialVersionUID = 197074826066153230L;
+		private static final long serialVersionUID = 197074826066153230L;
 
-        protected ItemAddedEvent(Object itemId) {
-            super(itemId);
-        }
-    }
+		protected ItemAddedEvent(Object itemId) {
+			super(itemId);
+		}
+	}
 
-    /**
-     * Event indicating that an item has been updated inside the container.
-     * 
-     * @author Petter Holmström (Vaadin Ltd)
-     * @since 1.0
-     */
-    public final class ItemUpdatedEvent extends ItemEvent {
+	/**
+	 * Event indicating that an item has been updated inside the container.
+	 * 
+	 * @author Petter Holmström (Vaadin Ltd)
+	 * @since 1.0
+	 */
+	public final class ItemUpdatedEvent extends ItemEvent {
 
-        private static final long serialVersionUID = 4464120712728895566L;
+		private static final long serialVersionUID = 4464120712728895566L;
 
-        protected ItemUpdatedEvent(Object itemId) {
-            super(itemId);
-        }
-    }
+		protected ItemUpdatedEvent(Object itemId) {
+			super(itemId);
+		}
+	}
 
-    /**
-     * Event indicating that an item has been removed from the container. This
-     * event is fired by {@link JPAContainer#removeItem(java.lang.Object) }.
-     * 
-     * @author Petter Holmström (Vaadin Ltd)
-     * @since 1.0
-     */
-    public final class ItemRemovedEvent extends ItemEvent {
+	/**
+	 * Event indicating that an item has been removed from the container. This
+	 * event is fired by {@link JPAContainer#removeItem(java.lang.Object) }.
+	 * 
+	 * @author Petter Holmström (Vaadin Ltd)
+	 * @since 1.0
+	 */
+	public final class ItemRemovedEvent extends ItemEvent {
 
-        private static final long serialVersionUID = 530688830477630703L;
+		private static final long serialVersionUID = 530688830477630703L;
 
-        protected ItemRemovedEvent(Object itemId) {
-            super(itemId);
-        }
-    }
+		protected ItemRemovedEvent(Object itemId) {
+			super(itemId);
+		}
+	}
 
-    public final class AllItemsRefreshedEvent implements ItemSetChangeEvent {
+	public final class AllItemsRefreshedEvent implements ItemSetChangeEvent {
 
-        private static final long serialVersionUID = 530180436710345623L;
+		private static final long serialVersionUID = 530180436710345623L;
 
-        protected AllItemsRefreshedEvent() {
-        }
+		protected AllItemsRefreshedEvent() {
+		}
 
-        @Override
+		@Override
 		public Container getContainer() {
-            return JPAContainer.this;
-        }
-    }
+			return JPAContainer.this;
+		}
+	}
 
-    @Override
+	@Override
 	public PropertyKind getPropertyKind(Object propertyId) {
-        assert propertyId != null : "propertyId must not be null";
-        return propertyList.getPropertyKind(propertyId.toString());
-    }
+		assert propertyId != null : "propertyId must not be null";
+		return propertyList.getPropertyKind(propertyId.toString());
+	}
 
-    @Override
+	@Override
 	@SuppressWarnings("unchecked")
-    public void refreshItem(Object itemId) {
-        LinkedList<WeakReference<JPAContainerItem<T>>> linkedList = null;
-        synchronized (getItemRegistry()) {
-            LinkedList<WeakReference<JPAContainerItem<T>>> origList = getItemRegistry()
-                    .get(itemId);
-            if (origList != null) {
-                linkedList = (LinkedList<WeakReference<JPAContainerItem<T>>>) origList
-                        .clone();
-            }
-        }
-        if (linkedList != null) {
-            for (WeakReference<JPAContainerItem<T>> weakReference : linkedList) {
-                JPAContainerItem<T> jpaContainerItem = weakReference.get();
-                if (jpaContainerItem != null) {
-                    jpaContainerItem.refresh();
-                }
-            }
-        }
-    }
+	public void refreshItem(Object itemId) {
+		LinkedList<WeakReference<JPAContainerItem<T>>> linkedList = null;
+		synchronized (getItemRegistry()) {
+			LinkedList<WeakReference<JPAContainerItem<T>>> origList = getItemRegistry()
+					.get(itemId);
+			if (origList != null) {
+				linkedList = (LinkedList<WeakReference<JPAContainerItem<T>>>) origList
+						.clone();
+			}
+		}
+		if (linkedList != null) {
+			for (WeakReference<JPAContainerItem<T>> weakReference : linkedList) {
+				JPAContainerItem<T> jpaContainerItem = weakReference.get();
+				if (jpaContainerItem != null) {
+					jpaContainerItem.refresh();
+				}
+			}
+		}
+	}
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see com.vaadin.addon.jpacontainer.EntityContainer#refresh()
-     */
-    @Override
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.vaadin.addon.jpacontainer.EntityContainer#refresh()
+	 */
+	@Override
 	public void refresh() {
-        doGetEntityProvider().refresh();
-        bufferingDelegate.discard();
-        synchronized (getItemRegistry()) {
-            for (Object id : getItemRegistry().keySet().toArray()) {
-                refreshItem(id);
-            }
-        }
-        fireContainerItemSetChange(new AllItemsRefreshedEvent());
-    }
+		doGetEntityProvider().refresh();
+		bufferingDelegate.discard();
+		synchronized (getItemRegistry()) {
+			for (Object id : getItemRegistry().keySet().toArray()) {
+				refreshItem(id);
+			}
+		}
+		fireContainerItemSetChange(new AllItemsRefreshedEvent());
+	}
 
-    @Override
+	@Override
 	public QueryModifierDelegate getQueryModifierDelegate() {
-        return queryModifierDelegate;
-    }
+		return queryModifierDelegate;
+	}
 
-    /**
-     * Sets the {@link QueryModifierDelegate}, which is called in the different
-     * stages that the EntityProvider builds a criteria query.
-     * 
-     * @param queryModifierDelegate
-     *            the delegate.
-     */
-    public void setQueryModifierDelegate(
-            QueryModifierDelegate queryModifierDelegate) {
-        this.queryModifierDelegate = queryModifierDelegate;
-    }
+	/**
+	 * Sets the {@link QueryModifierDelegate}, which is called in the different
+	 * stages that the EntityProvider builds a criteria query.
+	 * 
+	 * @param queryModifierDelegate
+	 *            the delegate.
+	 */
+	public void setQueryModifierDelegate(
+			QueryModifierDelegate queryModifierDelegate) {
+		this.queryModifierDelegate = queryModifierDelegate;
+	}
 
-    @Override
+	@Override
 	public void setBuffered(boolean buffered) {
-        // setReadThrough is an unsupported operation, so just set write
-        // through.
-        setWriteThrough(!buffered);
-    }
+		// setReadThrough is an unsupported operation, so just set write
+		// through.
+		setWriteThrough(!buffered);
+	}
 
-    @Override
+	@Override
 	public boolean isBuffered() {
-        return !isReadThrough() && isWriteThrough();
-    }
+		return !isReadThrough() && isWriteThrough();
+	}
 
-    @Override
+	@Override
 	public void addItemSetChangeListener(ItemSetChangeListener listener) {
-        addListener(listener);
-    }
+		addListener(listener);
+	}
 
-    @Override
+	@Override
 	public void removeItemSetChangeListener(ItemSetChangeListener listener) {
-        removeListener(listener);
-    }
+		removeListener(listener);
+	}
 
-    @Override
+	@Override
 	public List<?> getItemIds(int startIndex, int numberOfItems) {
-        // FIXME this should be optimized
-        ArrayList<Object> ids = new ArrayList<Object>();
-        for (int i = 0; i < numberOfItems; i++) {
-            ids.add(getIdByIndex(startIndex + i));
-        }
-        return ids;
-    }
+		// FIXME this should be optimized
+		ArrayList<Object> ids = new ArrayList<Object>();
+		for (int i = 0; i < numberOfItems; i++) {
+			ids.add(getIdByIndex(startIndex + i));
+		}
+		return ids;
+	}
 
-    @Override
-    public Collection<Filter> getContainerFilters() {
-        return getFilters();
-    }
+	@Override
+	public Collection<Filter> getContainerFilters() {
+		return getFilters();
+	}
 }
