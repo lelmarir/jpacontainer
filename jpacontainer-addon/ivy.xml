@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <!DOCTYPE ivy-module [
-	<!ENTITY vaadin.version "7.1.7">
+	<!ENTITY vaadin.version "7.2.0">
 ]>
 <ivy-module version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
@@ -23,8 +23,8 @@
 			
 		<dependency org="junit" name="junit" rev="4.11" conf="test->default"/>
         <dependency org="org.easymock" name="easymock" rev="3.1" conf="test->default"/>            
-        <dependency org="org.hibernate" name="hibernate-entitymanager" rev="4.2.2.Final" conf="test->default"/>
-        <dependency org="org.hibernate" name="hibernate-core" rev="4.2.2.Final" conf="test->default"/>
+        <dependency org="org.hibernate" name="hibernate-entitymanager" rev="4.2.2.Final" conf="default->default"/>
+        <dependency org="org.hibernate" name="hibernate-core" rev="4.2.2.Final" conf="default->default"/>
         <dependency org="org.slf4j" name="slf4j-api" rev="1.7.5" conf="test->default"/>
         <dependency org="org.slf4j" name="slf4j-api" rev="1.7.5" conf="test->default"/>
         <dependency org="hsqldb" name="hsqldb" rev="1.8.0.10" conf="test->default"/>

@@ -15,7 +15,6 @@
  */
 package com.vaadin.addon.jpacontainer.util;
 
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Collection;
@@ -23,10 +22,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import javax.persistence.EntityManager;
 import javax.persistence.Id;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Root;
+
+import org.hibernate.Hibernate;
 
 import com.vaadin.addon.jpacontainer.EntityProvider;
 import com.vaadin.addon.jpacontainer.LazyLoadingDelegate;
@@ -45,6 +47,10 @@ import com.vaadin.addon.jpacontainer.LazyLoadingDelegate;
  * @since 2.0
  */
 public class HibernateLazyLoadingDelegate implements LazyLoadingDelegate {
+
+	private static <E> Class<E> getEntityClass(E entity) {
+		return Hibernate.getClass(entity);
+	}
 
 	private EntityProvider<?> entityProvider;
 
@@ -72,13 +78,14 @@ public class HibernateLazyLoadingDelegate implements LazyLoadingDelegate {
 	 * @return the result list from the query.
 	 */
 	private <E> Object lazilyLoadPropertyValue(E entity, String prop) {
-		CriteriaBuilder cb = entityProvider.getEntityManager()
+		EntityManager em = entityProvider.getEntityManager();
+		CriteriaBuilder cb = em
 				.getCriteriaBuilder();
 		CriteriaQuery<Object> q = cb.createQuery();
-		Root<? extends Object> root = q.from(entity.getClass());
+		Root<? extends Object> root = q.from(getEntityClass(entity));
 		q.select(root.get(prop));
 		q.where(cb.equal(root.get("id"), cb.literal(tryGetEntityId(entity))));
-		return entityProvider.getEntityManager().createQuery(q).getResultList();
+		return em.createQuery(q).getResultList();
 	}
 
 	/**
@@ -150,28 +157,8 @@ public class HibernateLazyLoadingDelegate implements LazyLoadingDelegate {
 	 */
 	private <E> Object getEntityId(E entity) throws IllegalArgumentException,
 			IllegalAccessException, InvocationTargetException {
-		// Try fields
-		Class<?> clazz = entity.getClass();
-		while (!clazz.equals(Object.class)) {
-			for (Field f : clazz.getDeclaredFields()) {
-				if (f.isAnnotationPresent(Id.class)) {
-					try {
-						f.setAccessible(true);
-						return f.get(entity);
-					} finally {
-						f.setAccessible(false);
-					}
-				}
-			}
-			clazz = clazz.getSuperclass();
-		}
-		// Try methods if no annotated field was found.
-		for (Method m : entity.getClass().getMethods()) {
-			if (m.isAnnotationPresent(Id.class)) {
-				return m.invoke(entity);
-			}
-		}
-		return null;
+		return entityProvider.getEntityManager().getEntityManagerFactory()
+				.getPersistenceUnitUtil().getIdentifier(entity);
 	}
 
 	private <E> void trySetUsingSetter(E entity, String propertyName,
@@ -238,7 +225,7 @@ public class HibernateLazyLoadingDelegate implements LazyLoadingDelegate {
 	}
 
 	private <E> Method findSetterFor(E entity, String propertyName) {
-		for (Method m : entity.getClass().getMethods()) {
+		for (Method m : getEntityClass(entity).getMethods()) {
 			if (m.getName().equalsIgnoreCase("set" + propertyName)) {
 				return m;
 			}
