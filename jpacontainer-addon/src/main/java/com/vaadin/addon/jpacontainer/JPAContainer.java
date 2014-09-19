@@ -150,6 +150,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 			push(false);
 		}
 	};
+	private EntityGenerator<T> entityGenerator;
 
 	transient private HashMap<Object, LinkedList<WeakReference<JPAContainerItem<T>>>> itemRegistry;
 
@@ -172,6 +173,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 		this.propertyList = new PropertyList<T>(entityClassMetadata);
 		this.filterSupport = new AdvancedFilterableSupport();
 		this.bufferingDelegate = new BufferedContainerDelegate<T>(this);
+		this.entityGenerator = new DefaultEntityGenerator<>(entityClass);
 		/*
 		 * Add a listener to filterSupport, so that we can notify all clients
 		 * that use our container that the data has been filtered.
@@ -869,11 +871,11 @@ public class JPAContainer<T> implements EntityContainer<T>,
 						.get(item.getItemId());
 				if (listOfItemsForEntity == null) {
 					listOfItemsForEntity = new LinkedList<WeakReference<JPAContainerItem<T>>>();
-						getItemRegistry().put(item.getItemId(),
-								listOfItemsForEntity);
+					getItemRegistry().put(item.getItemId(),
+							listOfItemsForEntity);
 				}
 				listOfItemsForEntity
-							.add(new WeakReference<JPAContainerItem<T>>(item));
+						.add(new WeakReference<JPAContainerItem<T>>(item));
 			}
 		}
 	}
@@ -935,6 +937,19 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	@Override
 	public EntityItem<T> createEntityItem(T entity) {
 		return new JPAContainerItem<T>(this, entity, null, false);
+	}
+	
+	public EntityGenerator<T> getEntityGenerator() {
+		return this.entityGenerator;
+	}
+	
+	public void setEntityGenerator(EntityGenerator<T> entityGenerator) {
+		this.entityGenerator = entityGenerator;
+	}
+	
+	@Override
+	public EntityItem<T> createEntityItem() {
+		return createEntityItem(getEntityGenerator().createEntity());
 	}
 
 	@Override
@@ -1166,6 +1181,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	}
 
 	@Override
+	@Deprecated
 	public Object addEntity(T entity) throws UnsupportedOperationException,
 			IllegalStateException {
 		assert entity != null : "entity must not be null";
@@ -1189,7 +1205,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 		}
 		return id;
 	}
-	
+
 	protected Object getIdentifierPropertyValue(T entity) {
 		return getEntityClassMetadata().getPropertyValue(entity,
 				getEntityClassMetadata().getIdentifierProperty().getName());
@@ -1282,7 +1298,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
 		assert item != null : "item must not be null";
 		assert propertyId != null : "propertyId must not be null";
 
-		if (item.getItemId() != null) {
+		if (item.isPersistent()) {
+			assert item.getItemId() != null;
 
 			requireWritableContainer();
 
@@ -1312,8 +1329,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 * pass the changes on to the entity provider, depending on the state of the
 	 * <code>writeThrough</code> property <i>of the container</i>.
 	 * <p>
-	 * If <code>item</code> has no item ID ({@link JPAContainerItem#getItemId() }
-	 * ), this method does nothing.
+	 * If <code>item</code> is not persistent (
+	 * {@link JPAContainerItem#isPersistent() } ), this method does nothing.
 	 * 
 	 * @see #isWriteThrough()
 	 * @param item
@@ -1322,17 +1339,46 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	void containerItemModified(JPAContainerItem<T> item) {
 		assert item != null : "item must not be null";
 
-		if (item.getItemId() != null) {
-			requireWritableContainer();
+		requireWritableContainer();
+		boolean itemPersistent = item.isPersistent();
 
-			Object itemId = item.getItemId();
-			if (isWriteThrough()) {
-				((MutableEntityProvider<T>) getEntityProvider())
+		Object itemId;
+
+		if (isWriteThrough()) {
+			T e;
+			if (itemPersistent) {
+				assert item.getItemId() != null;
+				e = ((MutableEntityProvider<T>) getEntityProvider())
 						.updateEntity(item.getEntity());
-				item.setDirty(false);
 			} else {
-				bufferingDelegate.updateEntity(itemId, item.getEntity());
+				e = ((MutableEntityProvider<T>) getEntityProvider())
+						.addEntity(item.getEntity());
 			}
+			assert e != null;
+			item.replaceEntity(e);
+			item.setDirty(false);
+			itemId = item.getItemId();
+		} else {
+			if (itemPersistent) {
+				assert item.getItemId() != null;
+				itemId = item.getItemId();
+				bufferingDelegate.updateEntity(item.getItemId(),
+						item.getEntity());
+			} else {
+				itemId = bufferingDelegate.addEntity(item.getEntity());
+			}
+		}
+
+		setFireItemSetChangeOnProviderChange(false);
+		try {
+			if (itemPersistent) {
+				fireContainerItemSetChange(new ItemUpdatedEvent(itemId));
+			} else {
+				fireContainerItemSetChange(new ItemPersistedEvent(itemId));
+			}
+			//FIXME: dovrei tirare firePropertyChangeEvent per tutte le property
+		} finally {
+			setFireItemSetChangeOnProviderChange(true);
 		}
 	}
 
@@ -1346,21 +1392,21 @@ public class JPAContainer<T> implements EntityContainer<T>,
 			// during a commit (eg. inside a listener) one can call again commit
 			writeThrough.push(true);
 			try {
-			bufferingDelegate.commit();
-			setFireItemSetChangeOnProviderChange(false);
-			try {
-				fireContainerItemSetChange(new ChangesCommittedEvent());
-			} finally {
-				setFireItemSetChangeOnProviderChange(true);
-			}
+				bufferingDelegate.commit();
+				setFireItemSetChangeOnProviderChange(false);
+				try {
+					fireContainerItemSetChange(new ChangesCommittedEvent());
+				} finally {
+					setFireItemSetChangeOnProviderChange(true);
+				}
 			} finally {
 				boolean wt = writeThrough.pop();
 				if (wt != true) {
 					throw new IllegalStateException(
 							"During a commit writeThrough is true and now (at the end of the commit) it is false,"
 									+ " so someone has modified it without returning it to false");
-		}
-	}
+				}
+			}
 		}
 	}
 
@@ -1745,13 +1791,23 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 * @author Petter Holmström (Vaadin Ltd)
 	 * @since 1.0
 	 */
-	public final class ItemUpdatedEvent extends ItemEvent {
+	public class ItemUpdatedEvent extends ItemEvent {
 
 		private static final long serialVersionUID = 4464120712728895566L;
 
 		protected ItemUpdatedEvent(Object itemId) {
 			super(itemId);
 		}
+	}
+	
+	public class ItemPersistedEvent extends ItemUpdatedEvent {
+
+		private static final long serialVersionUID = 3354471987822030822L;
+
+		protected ItemPersistedEvent(Object itemId) {
+			super(itemId);
+		}
+		
 	}
 
 	/**
