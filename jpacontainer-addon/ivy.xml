@@ -16,6 +16,10 @@
 		<conf name="default" />
 		<conf name="test" visibility="private"/>
 	</configurations>
+	<publications>
+	    <artifact name="jpacontainer" ext="jar"/>
+	    <artifact name="jpacontainer-sources" type="source" ext="jar"/>
+	</publications>
 	<dependencies>
 		<dependency org="com.vaadin" name="vaadin-server" rev="&vaadin.version;" conf="default->default" />
 		<dependency org="org.eclipse.persistence" name="javax.persistence" rev="2.0.0"/>
