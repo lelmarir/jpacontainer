@@ -183,11 +183,15 @@ public class JPAContainer<T> implements EntityContainer<T>,
 
 					@Override
 					public void filtersApplied(AdvancedFilterableSupport sender) {
-						fireContainerItemSetChange(new FiltersAppliedEvent<JPAContainer<T>>(
-								JPAContainer.this));
+						fireFiltersAppliedEvent(sender);
 					}
 				});
 		updateFilterablePropertyIds();
+	}
+
+	protected void fireFiltersAppliedEvent(AdvancedFilterableSupport sender) {
+		fireContainerItemSetChange(new FiltersAppliedEvent<JPAContainer<T>>(
+				JPAContainer.this));
 	}
 
 	private Collection<String> additionalFilterablePropertyIds;
@@ -1339,6 +1343,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 				throw new IllegalStateException(
 						"commit() has been called recursively 5 time within commit execution");
 			}
+			// during a commit (eg. inside a listener) one can call again commit
 			writeThrough.push(true);
 			try {
 			bufferingDelegate.commit();

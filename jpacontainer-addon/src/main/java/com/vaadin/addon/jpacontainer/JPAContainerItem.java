@@ -320,7 +320,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
                     prop.commit();
                 }
                 modified = false;
-                container.containerItemModified(this);
+                containerItemModified();
             } catch (Property.ReadOnlyException e) {
                 throw new SourceException(this, e);
             }
