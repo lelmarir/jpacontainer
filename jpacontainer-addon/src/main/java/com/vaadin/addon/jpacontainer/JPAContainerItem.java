@@ -108,6 +108,13 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     public Object getItemId() {
         return itemId;
     }
+    
+    /**
+     * Set the itemId but does not altre {@link #isPersistent()} value
+     */
+    public void setItemId(Object itemId) {
+		this.itemId = itemId;
+	}
 
     @Override
     public boolean addItemProperty(Object id, @SuppressWarnings("rawtypes") Property property)
@@ -310,7 +317,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 
     @Override
     public void commit() throws SourceException, InvalidValueException {
-        if (!isWriteThrough()) {
+        if (!isWriteThrough() || !isPersistent()) {
             try {
                 /*
                  * Commit all properties. The commit() operation will check if
