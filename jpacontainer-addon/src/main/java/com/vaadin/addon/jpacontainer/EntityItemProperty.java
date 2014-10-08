@@ -24,7 +24,7 @@ import com.vaadin.data.Property;
  * @author Petter Holmström (Vaadin Ltd)
  * @since 1.0
  */
-public interface EntityItemProperty extends Property,
+public interface EntityItemProperty<T> extends Property<T>,
         Property.ValueChangeNotifier {
 
     /**

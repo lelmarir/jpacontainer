@@ -42,7 +42,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     private JPAContainer<T> container;
     private PropertyList<T> propertyList;
     private Map<Object, JPAContainerItemProperty<T>> propertyMap;
-    private boolean modified = false;
+    private Boolean modified = false;
     private boolean dirty = false;
     private boolean persistent = true;
     private boolean readThrough = true;
@@ -226,10 +226,19 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 
     @Override
     public boolean isModified() {
-        return modified;
+    	if(modified == null) { //is an unknown item properties modified state
+			for(JPAContainerItemProperty<T> prop : propertyMap.values()) {
+				if(prop.isModified()) {
+					return modified;
+				}
+			}
+			return false;
+    	} else {
+    		return modified;
+    	}
     }
     
-    public void setModified(boolean modified) {
+    public void setModified(Boolean modified) {
     	this.modified = modified;
     }
 
@@ -246,7 +255,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 
     @Override
     public boolean isDirty() {
-        return isPersistent() && dirty;
+        return dirty;
     }
 
     @Override
@@ -311,19 +320,21 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     @Override
     public void commit() throws SourceException, InvalidValueException {
         if (!isWriteThrough()) {
-            try {
-                /*
-                 * Commit all properties. The commit() operation will check if
-                 * the property is read only and ignore it if that is the case.
-                 */
-                for (JPAContainerItemProperty<T> prop : propertyMap.values()) {
-                    prop.commit();
-                }
-                modified = false;
-                containerItemModified();
-            } catch (Property.ReadOnlyException e) {
-                throw new SourceException(this, e);
-            }
+        	if(isModified()){
+	            try {
+	                /*
+	                 * Commit all properties. The commit() operation will check if
+	                 * the property is read only and ignore it if that is the case.
+	                 */
+	                for (JPAContainerItemProperty<T> prop : propertyMap.values()) {
+	                    prop.commit();
+	                }
+	                modified = false;
+	                containerItemModified();
+	            } catch (Property.ReadOnlyException e) {
+	                throw new SourceException(this, e);
+	            }
+        	}
         }
     }
 
@@ -473,5 +484,13 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     public boolean isBuffered() {
         return !isReadThrough() && !isWriteThrough();
     }
+
+	public void propertyRollBack(boolean modifiedBeforeTransaction) {
+		if(modifiedBeforeTransaction) {
+			modified = true;
+		} else {
+			modified = null;
+		}
+	}
 
 }

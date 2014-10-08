@@ -9,22 +9,29 @@ import java.util.Objects;
 
 import com.vaadin.addon.jpacontainer.util.HibernateUtil;
 import com.vaadin.data.Property;
+import com.vaadin.data.Property.Transactional;
 import com.vaadin.data.util.converter.Converter.ConversionException;
 
 /**
- * {@link Property}-implementation that is used by {@link EntityItem}.
- * Should not be used directly by clients.
+ * {@link Property}-implementation that is used by {@link EntityItem}. Should
+ * not be used directly by clients.
  * 
  * @author Petter Holmström (Vaadin Ltd)
  * @since 1.0
  */
-public class JPAContainerItemProperty<T> implements EntityItemProperty {
+public class JPAContainerItemProperty<T> implements EntityItemProperty<T>,
+		Transactional<T> {
 
 	private static final long serialVersionUID = 2791934277775480650L;
 	private JPAContainerItem<T> item;
 	private String propertyId;
-	private Object cachedValue;
+	private T cachedValue;
 	private boolean modified;
+
+	private boolean inTransaction = false;
+	private T valueBeforeTransaction;
+	private boolean modifiedBeforeTransaction;
+	private boolean valueChangePending = false;
 
 	/**
 	 * Creates a new <code>ItemProperty</code>.
@@ -50,8 +57,8 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty {
 	}
 
 	/**
-	 * Like the name suggests, this method notifies the listeners if the
-	 * cached value and real value are different.
+	 * Like the name suggests, this method notifies the listeners if the cached
+	 * value and real value are different.
 	 */
 	void notifyListenersIfCacheAndRealValueDiffer() {
 		Object realValue = getRealValue();
@@ -64,7 +71,7 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty {
 	 * Caches the real value of the property.
 	 */
 	void cacheRealValue() {
-		Object realValue = getRealValue();
+		T realValue = getRealValue();
 		cachedValue = realValue;
 	}
 
@@ -79,36 +86,41 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty {
 	 * <b>Note! This method assumes that write through is OFF!</b>
 	 * <p>
 	 * Sets the real value to the cached value. If read through is on, the
-	 * listeners are also notified as the value will appear to have changed
-	 * to them.
+	 * listeners are also notified as the value will appear to have changed to
+	 * them.
 	 * <p>
 	 * If the property is read only, nothing happens.
 	 * 
 	 * @throws ConversionException
 	 *             if the real value could not be set for some reason.
 	 */
-	void commit() throws ConversionException {
-		assert item.isWriteThrough() == false;
-		if (!isReadOnly()) {
-			try {
-				if (this.modified) {
-					setRealValue(cachedValue);
-					this.modified = false;
+	public void commit() throws ConversionException {
+		if (inTransaction) {
+			endTransaction();
+		} else {
+			assert item.isWriteThrough() == false;
+			if (!isReadOnly()) {
+				try {
+					if (this.modified) {
+						setRealValue(cachedValue);
+						this.modified = false;
+					}
+				} catch (Exception e) {
+					throw new ConversionException(e);
 				}
-			} catch (Exception e) {
-				throw new ConversionException(e);
 			}
 		}
+
 	}
 
 	/**
 	 * <b>Note! This method assumes that write through is OFF!</b>
 	 * <p>
-	 * Replaces the cached value with the real value. If read through is
-	 * off, the listeners are also notified as the value will appera to have
-	 * changed to them.
+	 * Replaces the cached value with the real value. If read through is off,
+	 * the listeners are also notified as the value will appear to have changed
+	 * to them.
 	 */
-	void discard() {
+	public void discard() {
 		Object realValue = getRealValue();
 
 		if (!item.isWriteThrough()) {
@@ -125,11 +137,12 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty {
 		} else {
 			if (!item.isReadThrough()) {
 				cacheRealValue();
-			}else{
-				throw new IllegalStateException("Should not (is useless) call discard() if at least readTrough or writeTrough is OFF");
+			} else {
+				throw new IllegalStateException(
+						"Should not (is useless) call discard() if at least readTrough or writeTrough is OFF");
 			}
 		}
-		
+
 		if (!Objects.equals(realValue, cachedValue)) {
 			fireValueChangeEvent();
 		}
@@ -141,12 +154,12 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty {
 	}
 
 	@Override
-	public Class<?> getType() {
-		return item.getItemPropertyType(propertyId);
+	public Class<T> getType() {
+		return (Class<T>) item.getItemPropertyType(propertyId);
 	}
 
 	@Override
-	public Object getValue() {
+	public T getValue() {
 		if (item.isReadThrough()) {
 			if (!item.isWriteThrough() && this.modified) {
 				return cachedValue;
@@ -163,9 +176,10 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty {
 	 * 
 	 * @return the real value.
 	 */
-	private Object getRealValue() {
+	@SuppressWarnings("unchecked")
+	private T getRealValue() {
 		ensurePropertyLoaded(propertyId);
-		return item.getItemPropertyValue(propertyId);
+		return (T) item.getItemPropertyValue(propertyId);
 	}
 
 	@Override
@@ -194,11 +208,11 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty {
 	}
 
 	/**
-	 * Sets the real value of the property to <code>newValue</code>. The
-	 * value is expected to be of the correct type at this point (i.e. any
-	 * conversions from a String should have been done already). As this
-	 * method updates the backend entity object, it also turns on the
-	 * <code>dirty</code> flag of the item.
+	 * Sets the real value of the property to <code>newValue</code>. The value
+	 * is expected to be of the correct type at this point (i.e. any conversions
+	 * from a String should have been done already). As this method updates the
+	 * backend entity object, it also turns on the <code>dirty</code> flag of
+	 * the item.
 	 * 
 	 * @see JPAContainerItem#isDirty()
 	 * @param newValue
@@ -225,8 +239,7 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty {
 		}
 		boolean shouldLoadEntity = false;
 		try {
-			Object value = item
-					.getItemPropertyValue(propertyId);
+			Object value = item.getItemPropertyValue(propertyId);
 			if (value != null) {
 				shouldLoadEntity = HibernateUtil
 						.isUninitializedAndUnattachedProxy(value);
@@ -250,19 +263,20 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
-	public void setValue(Object newValue) throws ReadOnlyException,
+	public void setValue(T newValue) throws ReadOnlyException,
 			ConversionException {
 		if (isReadOnly()) {
-			throw new ReadOnlyException();
+			throw new ReadOnlyException("The property is in read-only state");
 		}
 
 		if (newValue != null
 				&& !getType().isAssignableFrom(newValue.getClass())) {
 			/*
 			 * The type we try to set is incompatible with the type of the
-			 * property. We therefore try to convert the value to a string
-			 * and see if there is a constructor that takes a single string
+			 * property. We therefore try to convert the value to a string and
+			 * see if there is a constructor that takes a single string
 			 * argument. If this fails, we throw an exception.
 			 */
 			try {
@@ -270,7 +284,7 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty {
 				final Constructor<?> constr = getType().getConstructor(
 						new Class[] { String.class });
 
-				newValue = constr.newInstance(new Object[] { newValue
+				newValue = (T) constr.newInstance(new Object[] { newValue
 						.toString() });
 			} catch (Exception e) {
 				throw new ConversionException(e);
@@ -278,7 +292,8 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty {
 		}
 		try {
 			if (item.isWriteThrough()) {
-				//FIXME: setRealValue e containerItemPropertyModified modificano 2 entity diverse
+				// FIXME: setRealValue e containerItemPropertyModified
+				// modificano 2 entity diverse
 				setRealValue(newValue);
 				item.containerItemPropertyModified(propertyId);
 			} else {
@@ -310,17 +325,20 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty {
 	}
 
 	/**
-	 * Notifies all the listeners that the value of the property has
-	 * changed.
+	 * Notifies all the listeners that the value of the property has changed.
 	 */
 	@Override
 	public void fireValueChangeEvent() {
-		if (listeners != null) {
-			final Object[] l = listeners.toArray();
-			final Property.ValueChangeEvent event = new ValueChangeEvent(
-					this);
-			for (int i = 0; i < l.length; i++) {
-				((Property.ValueChangeListener) l[i]).valueChange(event);
+		if (inTransaction) {
+			valueChangePending = true;
+		} else {
+			if (listeners != null) {
+				final Object[] l = listeners.toArray();
+				final Property.ValueChangeEvent event = new ValueChangeEvent(
+						this);
+				for (int i = 0; i < l.length; i++) {
+					((Property.ValueChangeListener) l[i]).valueChange(event);
+				}
 			}
 		}
 	}
@@ -353,5 +371,45 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty {
 	@Override
 	public void removeValueChangeListener(ValueChangeListener listener) {
 		removeListener(listener);
+	}
+
+	/** {@inheritDoc}
+	 * If the property is in read-only state the transaction has no sense. In this case the transaction is not started.
+	 * <p>
+	 * */
+	@Override
+	public void startTransaction() {
+		if (!isReadOnly()) {
+			inTransaction = true;
+			valueBeforeTransaction = cachedValue;
+			modifiedBeforeTransaction = modified;
+		}
+	}
+
+	@Override
+	public void rollback() {
+		if(inTransaction) {
+			cachedValue = valueBeforeTransaction;
+			modified = modifiedBeforeTransaction;
+			// the rollback() method recover the old value and if during the
+			// transaction the property value was changed by another this event is
+			// not fired
+			valueChangePending = false;
+			item.propertyRollBack(modifiedBeforeTransaction);
+			endTransaction();
+		}
+	}
+
+	private void endTransaction() {
+		assert inTransaction == true;
+		inTransaction = false;
+		valueBeforeTransaction = null;
+		if (valueChangePending) {
+			fireValueChangeEvent();
+		}
+	}
+	
+	public boolean isModified() {
+		return modified;
 	}
 }
