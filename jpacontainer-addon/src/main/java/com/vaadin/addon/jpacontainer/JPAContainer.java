@@ -1468,9 +1468,12 @@ public class JPAContainer<T> implements EntityContainer<T>,
 		}
 
 		if (writeThrough) {
-			commit();
-			this.writeThrough.pop();
-			this.writeThrough.push(true);
+			try {
+				commit();
+			} finally {
+				this.writeThrough.pop();
+				this.writeThrough.push(true);
+			}
 		} else {
 			if (doGetEntityProvider() instanceof BatchableEntityProvider) {
 				this.writeThrough.pop();
