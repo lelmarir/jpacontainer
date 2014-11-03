@@ -718,14 +718,9 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 */
 	@Override
 	public Object addItem() throws UnsupportedOperationException {
-		try {
-			T newInstance = getEntityClass().newInstance();
-			Object id = addEntity(newInstance);
-			return id;
-		} catch (InstantiationException e) {
-		} catch (IllegalAccessException e) {
-		}
-		throw new UnsupportedOperationException();
+		EntityItem<T> item = createEntityItem();
+		item.commit();
+		return item.getItemId();
 	}
 
 	@Override
@@ -1356,6 +1351,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
 			}
 			assert e != null;
 			item.replaceEntity(e);
+			item.setItemId(getEntityProvider().getIdentifier(e));
+			item.setPersistent(true);
 			item.setDirty(false);
 			itemId = item.getItemId();
 		} else {
@@ -1366,6 +1363,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
 						item.getEntity());
 			} else {
 				itemId = bufferingDelegate.addEntity(item.getEntity());
+				item.setItemId(itemId);
+				//but still not persistent
 			}
 		}
 

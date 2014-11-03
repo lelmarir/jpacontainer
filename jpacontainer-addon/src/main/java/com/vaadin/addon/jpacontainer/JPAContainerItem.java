@@ -108,6 +108,13 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
     public Object getItemId() {
         return itemId;
     }
+    
+    /**
+     * Set the itemId but does not alter {@link #isPersistent()} value
+     */
+    public void setItemId(Object itemId) {
+		this.itemId = itemId;
+	}
 
     @Override
     public boolean addItemProperty(Object id, @SuppressWarnings("rawtypes") Property property)
@@ -485,8 +492,10 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
         return !isReadThrough() && !isWriteThrough();
     }
 
-	public void propertyRollBack(boolean modifiedBeforeTransaction) {
-		if(modifiedBeforeTransaction) {
+    /** This method will be notified by the property when {@link JPAContainerItemProperty#rollback() rollback()} is called
+     * */
+	public void containerItemPropertyRollbacked(JPAContainerItemProperty<?> property) {
+		if(property.isModified()) {
 			modified = true;
 		} else {
 			modified = null;

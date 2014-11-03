@@ -65,7 +65,7 @@
 			</manifest>
 		</jar>
 
-		<jar destfile="${artifacts}/${jarfilename}-sources.jar" basedir="${sources}" includes="**/*.*">
+		<jar destfile="${artifacts}/${jarfilename}-source.jar" basedir="${sources}" includes="**/*.*">
 			<manifest>
 				<!-- <attribute name="Built-By" value="${user.name}"/> -->
 				<section name="common">

@@ -395,7 +395,7 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty<T>,
 			// transaction the property value was changed by another this event is
 			// not fired
 			valueChangePending = false;
-			item.propertyRollBack(modifiedBeforeTransaction);
+			item.containerItemPropertyRollbacked(this);
 			endTransaction();
 		}
 	}
