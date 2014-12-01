@@ -1912,7 +1912,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 
 	@Override
 	public boolean isBuffered() {
-		return !isReadThrough() && isWriteThrough();
+		return !isReadThrough() && !isWriteThrough();
 	}
 
 	@Override
