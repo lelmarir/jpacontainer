@@ -95,7 +95,7 @@ public final class Filters {
      */
     public static Filter like(Object propertyId, String value,
             boolean caseSensitive) {
-        return new Like(propertyId.toString(), value, caseSensitive);
+        return new Like(propertyId, value, caseSensitive);
     }
 
     /**
