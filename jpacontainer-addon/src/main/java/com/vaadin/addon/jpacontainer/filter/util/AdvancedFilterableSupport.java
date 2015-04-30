@@ -44,6 +44,17 @@ import com.vaadin.data.util.filter.SimpleStringFilter;
  */
 public class AdvancedFilterableSupport implements AdvancedFilterable,
         Serializable {
+	
+	public class FilterAppliedEvent {
+		
+		public FilterAppliedEvent() {
+			// TODO Auto-generated constructor stub
+		}
+		
+		public AdvancedFilterableSupport getAdvancedFilterableSupport() {
+			return AdvancedFilterableSupport.this;
+		}
+	}
 
     private static final long serialVersionUID = 398382431841547719L;
 
@@ -62,7 +73,7 @@ public class AdvancedFilterableSupport implements AdvancedFilterable,
          * @param sender
          *            the sender of the event.
          */
-        public void filtersApplied(AdvancedFilterableSupport sender);
+        public void filtersApplied(FilterAppliedEvent event);
     }
 
     /**
@@ -92,12 +103,16 @@ public class AdvancedFilterableSupport implements AdvancedFilterable,
     }
 
     @SuppressWarnings("unchecked")
-    protected void fireListeners() {
+    protected void fireListeners(FilterAppliedEvent event) {
         LinkedList<ApplyFiltersListener> listenerList = (LinkedList<ApplyFiltersListener>) listeners
                 .clone();
         for (ApplyFiltersListener l : listenerList) {
-            l.filtersApplied(this);
+            l.filtersApplied(event);
         }
+    }
+    
+    protected void fireListeners() {
+    	fireListeners(new FilterAppliedEvent());
     }
 
     private Collection<Object> filterablePropertyIds;
@@ -208,6 +223,9 @@ public class AdvancedFilterableSupport implements AdvancedFilterable,
     @Override
     public void setApplyFiltersImmediately(boolean applyFiltersImmediately) {
         this.applyFiltersImmediately = applyFiltersImmediately;
+        if(applyFiltersImmediately) {
+        	applyFilters();
+        }
     }
 
     /**

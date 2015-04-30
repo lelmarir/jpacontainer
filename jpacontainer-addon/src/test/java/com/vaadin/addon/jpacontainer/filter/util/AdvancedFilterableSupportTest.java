@@ -32,6 +32,7 @@ import java.util.LinkedList;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.vaadin.addon.jpacontainer.filter.util.AdvancedFilterableSupport.FilterAppliedEvent;
 import com.vaadin.data.Container.Filter;
 
 /**
@@ -43,6 +44,8 @@ import com.vaadin.data.Container.Filter;
 public class AdvancedFilterableSupportTest {
 
     private AdvancedFilterableSupport testObject;
+    
+    FilterAppliedEvent testEvent =  testObject.new FilterAppliedEvent();
 
     private AdvancedFilterableSupport.ApplyFiltersListener listenerMock;
 
@@ -100,8 +103,8 @@ public class AdvancedFilterableSupportTest {
     public void testAddFilter_ApplyImmediately() {
         assertTrue(testObject.isApplyFiltersImmediately());
         assertFalse(testObject.hasUnappliedFilters());
-
-        listenerMock.filtersApplied(testObject);
+       
+        listenerMock.filtersApplied(testEvent);
         replay(listenerMock);
 
         assertFalse(testObject.getFilters().contains(filterMock));
@@ -119,7 +122,7 @@ public class AdvancedFilterableSupportTest {
         assertFalse(testObject.isApplyFiltersImmediately());
         assertFalse(testObject.hasUnappliedFilters());
 
-        listenerMock.filtersApplied(testObject);
+        listenerMock.filtersApplied(testEvent);
         expectLastCall().once();
         replay(listenerMock);
 
@@ -150,7 +153,7 @@ public class AdvancedFilterableSupportTest {
         assertTrue(testObject.isApplyFiltersImmediately());
         assertFalse(testObject.hasUnappliedFilters());
 
-        listenerMock.filtersApplied(testObject);
+        listenerMock.filtersApplied(testEvent);
         expectLastCall().times(2);
         replay(listenerMock);
 
@@ -171,7 +174,7 @@ public class AdvancedFilterableSupportTest {
         assertFalse(testObject.isApplyFiltersImmediately());
         assertFalse(testObject.hasUnappliedFilters());
 
-        listenerMock.filtersApplied(testObject);
+        listenerMock.filtersApplied(testEvent);
         expectLastCall().times(2);
         replay(listenerMock);
 
@@ -196,7 +199,7 @@ public class AdvancedFilterableSupportTest {
         assertTrue(testObject.isApplyFiltersImmediately());
         assertFalse(testObject.hasUnappliedFilters());
 
-        listenerMock.filtersApplied(testObject);
+        listenerMock.filtersApplied(testEvent);
         expectLastCall().times(2);
         replay(listenerMock);
 
@@ -217,7 +220,7 @@ public class AdvancedFilterableSupportTest {
         assertFalse(testObject.isApplyFiltersImmediately());
         assertFalse(testObject.hasUnappliedFilters());
 
-        listenerMock.filtersApplied(testObject);
+        listenerMock.filtersApplied(testEvent);
         expectLastCall().times(2);
         replay(listenerMock);
 
