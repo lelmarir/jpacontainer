@@ -258,7 +258,7 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty<T>,
 			}
 		}
 		if (shouldLoadEntity) {
-			item.replaceEntity(lazyLoadingDelegate.ensureLazyPropertyLoaded(
+			item.updateEntity(lazyLoadingDelegate.ensureLazyPropertyLoaded(
 					item.getEntity(), propertyId));
 		}
 	}

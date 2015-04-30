@@ -32,6 +32,7 @@ import java.util.logging.Logger;
 
 import com.vaadin.addon.jpacontainer.EntityProviderChangeEvent.EntityPropertyUpdatedEvent;
 import com.vaadin.addon.jpacontainer.filter.util.AdvancedFilterableSupport;
+import com.vaadin.addon.jpacontainer.filter.util.AdvancedFilterableSupport.FilterAppliedEvent;
 import com.vaadin.addon.jpacontainer.metadata.EntityClassMetadata;
 import com.vaadin.addon.jpacontainer.metadata.MetadataFactory;
 import com.vaadin.addon.jpacontainer.metadata.PropertyKind;
@@ -137,7 +138,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	private static final int CLEANUPRATE = 200;
 	private static final int MAX_NESTED_COMMITS = 5;
 	private EntityProvider<T> entityProvider;
-	private AdvancedFilterableSupport filterSupport;
+	protected AdvancedFilterableSupport filterSupport;
 	private LinkedList<ItemSetChangeListener> listeners;
 	private EntityClassMetadata<T> entityClassMetadata;
 	private List<SortBy> sortByList;
@@ -184,14 +185,15 @@ public class JPAContainer<T> implements EntityContainer<T>,
 					private static final long serialVersionUID = -23196201919497112L;
 
 					@Override
-					public void filtersApplied(AdvancedFilterableSupport sender) {
-						fireFiltersAppliedEvent(sender);
+					public void filtersApplied(FilterAppliedEvent event) {
+						fireFiltersAppliedEvent(event);
+						
 					}
 				});
 		updateFilterablePropertyIds();
 	}
 
-	protected void fireFiltersAppliedEvent(AdvancedFilterableSupport sender) {
+	protected void fireFiltersAppliedEvent(FilterAppliedEvent event) {
 		fireContainerItemSetChange(new FiltersAppliedEvent<JPAContainer<T>>(
 				JPAContainer.this));
 	}
@@ -1350,7 +1352,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 						.addEntity(item.getEntity());
 			}
 			assert e != null;
-			item.replaceEntity(e);
+			item.updateEntity(e);
 			item.setItemId(getEntityProvider().getIdentifier(e));
 			item.setPersistent(true);
 			item.setDirty(false);
@@ -1912,7 +1914,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 
 	@Override
 	public boolean isBuffered() {
-		return !isReadThrough() && isWriteThrough();
+		return !isReadThrough() && !isWriteThrough();
 	}
 
 	@Override
