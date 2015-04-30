@@ -23,3 +23,8 @@ pom.xml.versionsBackup
 pom.xml.next
 release.properties
 
+/jpacontainer-addon/.settings
+/jpacontainer-addon/mem.log
+/jpacontainer-addon/mem.properties
+/jpacontainer-addon/mem.script
+/jpacontainer-addon/mem.lck
