@@ -17,6 +17,7 @@
 package com.vaadin.addon.jpacontainer;
 
 import com.vaadin.data.Property;
+import com.vaadin.data.util.converter.Converter.ConversionException;
 
 /**
  * Interface defining the Properties that are contained in a {@link EntityItem}.
@@ -24,7 +25,7 @@ import com.vaadin.data.Property;
  * @author Petter Holmström (Vaadin Ltd)
  * @since 1.0
  */
-public interface EntityItemProperty<T> extends Property<T>,
+public interface EntityItemProperty<E, T> extends Property<T>,
         Property.ValueChangeNotifier {
 
     /**
@@ -32,7 +33,7 @@ public interface EntityItemProperty<T> extends Property<T>,
      * 
      * @return the item (never null).
      */
-    public EntityItem<?> getItem();
+    public EntityItem<E> getItem();
     
     /**
      * Gets the property id of this property.
@@ -45,4 +46,32 @@ public interface EntityItemProperty<T> extends Property<T>,
      * Fires value change event for this property
      */
     void fireValueChangeEvent();
+
+	boolean isModified();
+
+	/**
+	 * <b>Note! This method assumes that write through is OFF!</b>
+	 * <p>
+	 * Sets the real value to the cached value. If read through is on, the
+	 * listeners are also notified as the value will appear to have changed to
+	 * them.
+	 * <p>
+	 * If the property is read only, nothing happens.
+	 * 
+	 * @throws ConversionException
+	 *             if the real value could not be set for some reason.
+	 */
+	public void commit();
+
+	/**
+	 * <b>Note! This method assumes that write through is OFF!</b>
+	 * <p>
+	 * Replaces the cached value with the real value. If read through is off,
+	 * the listeners are also notified as the value will appear to have changed
+	 * to them.
+	 */
+	public void discard();
+
+	void setWriteThrough(boolean writeThrough);
+	
 }

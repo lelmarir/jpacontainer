@@ -37,10 +37,10 @@ import javax.persistence.Entity;
  * @author Petter Holmström (Vaadin Ltd)
  * @since 1.0
  */
-public class ClassMetadata<T> implements Serializable {
+public class ClassMetadata<E> implements Serializable {
 
     private static final long serialVersionUID = 2569781449737488799L;
-    private final Class<T> mappedClass;
+    private final Class<E> mappedClass;
     private final Map<String, PropertyMetadata> allProperties = new LinkedHashMap<String, PropertyMetadata>();
     private final Map<String, PersistentPropertyMetadata> persistentProperties = new LinkedHashMap<String, PersistentPropertyMetadata>();
 
@@ -53,7 +53,7 @@ public class ClassMetadata<T> implements Serializable {
      * @param mappedClass
      *            the mapped class (must not be null).
      */
-    ClassMetadata(Class<T> mappedClass) {
+    ClassMetadata(Class<E> mappedClass) {
         assert mappedClass != null : "mappedClass must not be null";
         this.mappedClass = mappedClass;
     }
@@ -85,7 +85,7 @@ public class ClassMetadata<T> implements Serializable {
      * 
      * @return the class (never null).
      */
-    public Class<T> getMappedClass() {
+    public Class<E> getMappedClass() {
         return mappedClass;
     }
 
@@ -154,7 +154,7 @@ public class ClassMetadata<T> implements Serializable {
      * @throws IllegalArgumentException
      *             if the property could not be retrieved.
      */
-    protected Object getPropertyValue(T object, PropertyMetadata property)
+    protected Object getPropertyValue(E object, PropertyMetadata property)
             throws IllegalArgumentException {
         assert object != null : "object must not be null";
         assert property != null : "property must not be null";
@@ -175,7 +175,7 @@ public class ClassMetadata<T> implements Serializable {
         }
     }
 
-    private Object getPropertyValueFromField(T object,
+    private Object getPropertyValueFromField(E object,
             PersistentPropertyMetadata ppmd) throws IllegalAccessException,
             IllegalArgumentException, InvocationTargetException {
         // First we try to find a getter for the field in order to
@@ -219,7 +219,7 @@ public class ClassMetadata<T> implements Serializable {
      * @throws IllegalArgumentException
      *             if the property could not be set.
      */
-    protected void setPropertyValue(T object, PropertyMetadata property,
+    protected void setPropertyValue(E object, PropertyMetadata property,
             Object value) throws IllegalArgumentException {
         assert object != null : "object must not be null";
         assert property != null : "property must not be null";
@@ -324,7 +324,7 @@ public class ClassMetadata<T> implements Serializable {
      *             <code>propertyName</code> being invalid.
      */
     @SuppressWarnings("unchecked")
-    public Object getPropertyValue(T object, String propertyName)
+    public Object getPropertyValue(E object, String propertyName)
             throws IllegalArgumentException {
         assert object != null : "object must not be null";
         assert propertyName != null : "propertyName must not be null";
@@ -395,7 +395,7 @@ public class ClassMetadata<T> implements Serializable {
      *             properties (other than the last one) is null.
      */
     @SuppressWarnings("unchecked")
-    public void setPropertyValue(T object, String propertyName, Object value)
+    public void setPropertyValue(E object, String propertyName, Object value)
             throws IllegalArgumentException, IllegalStateException {
         assert object != null : "object must not be null";
         assert propertyName != null : "propertyName must not be null";

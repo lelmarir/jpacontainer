@@ -697,6 +697,12 @@ public class JPAContainer<T> implements EntityContainer<T>,
 			Object defaultValue) throws UnsupportedOperationException {
 		throw new UnsupportedOperationException();
 	}
+	
+	public boolean addContainerProperty(PropertyDefinition definition) throws UnsupportedOperationException {
+		propertyList.addProperty(definition);
+		return true;
+		
+	}
 
 	/**
 	 * <strong>This functionality is not supported by this

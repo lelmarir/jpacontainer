@@ -21,6 +21,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.vaadin.data.Container;
 import com.vaadin.data.Container.ItemSetChangeEvent;
@@ -35,14 +37,15 @@ import com.vaadin.data.Validator.InvalidValueException;
  * @author Petter Holmström (Vaadin Ltd)
  * @since 1.0
  */
-public final class JPAContainerItem<T> implements EntityItem<T> {
+public final class JPAContainerItem<E> implements EntityItem<E> {
 
 	private static final long serialVersionUID = 3835181888110236341L;
+	private static final Logger logger = Logger.getLogger(JPAContainerItem.class.getName());
 
-	private T entity;
-	private JPAContainer<T> container;
-	private PropertyList<T> propertyList;
-	private Map<Object, JPAContainerItemProperty<T>> propertyMap;
+	private E entity;
+	private JPAContainer<E> container;
+	private PropertyList<E> propertyList;
+	private Map<Object, EntityItemProperty<E, ?>> propertyMap;
 	private Boolean modified = false;
 	private boolean dirty = false;
 	private boolean persistent = true;
@@ -62,9 +65,8 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	 *            the entity for which the item should be created (must not be
 	 *            null).
 	 */
-	JPAContainerItem(JPAContainer<T> container, T entity) {
-		this(container, entity, container.getIdentifierPropertyValue(entity),
-				true);
+	JPAContainerItem(JPAContainer<E> container, E entity) {
+		this(container, entity, container.getIdentifierPropertyValue(entity), true);
 	}
 
 	/**
@@ -82,8 +84,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	 *            true if the entity is persistent, false otherwise. If
 	 *            <code>itemId</code> is null, this parameter will be ignored.
 	 */
-	JPAContainerItem(JPAContainer<T> container, T entity, Object itemId,
-			boolean persistent) {
+	JPAContainerItem(JPAContainer<E> container, E entity, Object itemId, boolean persistent) {
 		assert container != null : "container must not be null";
 		assert entity != null : "entity must not be null";
 		this.entity = entity;
@@ -99,7 +100,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 		} else {
 			this.persistent = persistent;
 		}
-		this.propertyMap = new HashMap<Object, JPAContainerItemProperty<T>>();
+		this.propertyMap = new HashMap<>();
 		// the itemRegistry will ignore this item if the id is null
 		// FIXME: l'item viene registrato quando viene salvato (e gli viene
 		// assegnato un id)?
@@ -119,8 +120,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	}
 
 	@Override
-	public boolean addItemProperty(Object id,
-			@SuppressWarnings("rawtypes") Property property)
+	public boolean addItemProperty(Object id, @SuppressWarnings("rawtypes") Property property)
 			throws UnsupportedOperationException {
 		throw new UnsupportedOperationException();
 	}
@@ -129,7 +129,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	 * 
 	 * @return the local propertyList if present, or the container one.
 	 */
-	private PropertyList<T> getPropertyList() {
+	private PropertyList<E> getPropertyList() {
 		if (this.propertyList == null) {
 			// questo metodo chiamerebbe getPropertyList(false), quindi evito di
 			// fare un if in piu
@@ -147,12 +147,11 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	 * @return the local propertyList if present or localCopy is true, else the
 	 *         container one.
 	 */
-	private PropertyList<T> getPropertyList(boolean localCopy) {
+	private PropertyList<E> getPropertyList(boolean localCopy) {
 
 		if (this.propertyList == null) {
 			if (localCopy == true) {
-				this.propertyList = new PropertyList<T>(
-						container.getPropertyList());
+				this.propertyList = new PropertyList<E>(container.getPropertyList());
 			} else {
 				return container.getPropertyList();
 			}
@@ -161,20 +160,25 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	}
 
 	@Override
-	public void addNestedContainerProperty(String nestedProperty)
-			throws UnsupportedOperationException {
+	public void addNestedContainerProperty(String nestedProperty) throws UnsupportedOperationException {
 		getPropertyList(true).addNestedProperty(nestedProperty);
 	}
 
 	@Override
 	public EntityItemProperty getItemProperty(Object id) {
 		assert id != null : "id must not be null";
-		JPAContainerItemProperty<T> p = propertyMap.get(id);
+		EntityItemProperty<E, ?> p = propertyMap.get(id);
 		if (p == null) {
-			if (!getItemPropertyIds().contains(id.toString())) {
+			PropertyDefinition<E, ?> d = getPropertyList().getProperty(id.toString());
+			if (d == null) {
 				return null;
+			} else {
+				p = d.createProperty(this);
 			}
-			p = new JPAContainerItemProperty<T>(this, id.toString());
+			// if (!getItemPropertyIds().contains(id.toString())) {
+			// return null;
+			// }
+			// p = new JPAContainerItemProperty<T>(this, id.toString());
 			propertyMap.put(id, p);
 		}
 		return p;
@@ -224,8 +228,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	}
 
 	@Override
-	public boolean removeItemProperty(Object id)
-			throws UnsupportedOperationException {
+	public boolean removeItemProperty(Object id) throws UnsupportedOperationException {
 		assert id != null : "id must not be null";
 		if (id.toString().indexOf('.') > -1) {
 			return getPropertyList(true).removeProperty(id.toString());
@@ -237,7 +240,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	@Override
 	public boolean isModified() {
 		if (modified == null) { // is an unknown item properties modified state
-			for (JPAContainerItemProperty<T> prop : propertyMap.values()) {
+			for (EntityItemProperty<E, ?> prop : propertyMap.values()) {
 				if (prop.isModified()) {
 					return modified;
 				}
@@ -271,9 +274,8 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	@Override
 	public void markAsDirty() {
 		if (isWriteThrough() == false) {
-			throw new IllegalStateException(
-					"You shoud not modify the entity directly if the item is not WriteThrough, "
-							+ "thre could be unsaved property not yet reflected on the entity");
+			throw new IllegalStateException("You shoud not modify the entity directly if the item is not WriteThrough, "
+					+ "thre could be unsaved property not yet reflected on the entity");
 		}
 		setDirty(true);
 		containerItemModified();
@@ -314,12 +316,12 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	}
 
 	@Override
-	public EntityContainer<T> getContainer() {
+	public EntityContainer<E> getContainer() {
 		return container;
 	}
 
 	@Override
-	public T getEntity() {
+	public E getEntity() {
 		return this.entity;
 	}
 
@@ -329,7 +331,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	 * 
 	 * @param entity
 	 */
-	void updateEntity(T entity) {
+	void updateEntity(E entity) {
 		updateEntity(entity, null);
 	}
 
@@ -340,16 +342,27 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	 * @param entity
 	 * @param changedProperties
 	 */
-	void updateEntity(T entity, Set<String> changedProperties) {
+	void updateEntity(E entity, Set<String> changedProperties) {
 		// FIXME: si dovrebbe considerare readTrough
-		// TODO: notificare l'evento
-		if (!this.entity.equals(entity)) {
-			this.entity = entity;
 
-			if (changedProperties != null && !changedProperties.isEmpty()) {
-				for (String id : changedProperties) {
-					getItemProperty(id).fireValueChangeEvent();
-				}
+		if (this.entity == entity) {
+			return;
+		}
+
+		if (!this.entity.equals(entity)) {
+			logger.log(Level.WARNING, "A JPA entity should always be equal to a subsequent loaded instance");
+		}
+
+		this.entity = entity;
+
+		if (changedProperties == null || changedProperties.isEmpty()) {
+			// FIXME we could fire only really changed properties
+			for (String id : getPropertyList().getAllAvailablePropertyNames()) {
+				getItemProperty(id).fireValueChangeEvent();
+			}
+		} else {
+			for (String id : changedProperties) {
+				getItemProperty(id).fireValueChangeEvent();
 			}
 		}
 	}
@@ -364,8 +377,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 					 * if the property is read only and ignore it if that is the
 					 * case.
 					 */
-					for (JPAContainerItemProperty<T> prop : propertyMap
-							.values()) {
+					for (EntityItemProperty<E, ?> prop : propertyMap.values()) {
 						prop.commit();
 					}
 					modified = false;
@@ -380,7 +392,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	@Override
 	public void discard() throws SourceException {
 		if (!isWriteThrough()) {
-			for (JPAContainerItemProperty<T> prop : propertyMap.values()) {
+			for (EntityItemProperty<E, ?> prop : propertyMap.values()) {
 				prop.discard();
 			}
 			modified = false;
@@ -398,15 +410,13 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	public void setReadThrough(boolean readThrough) throws SourceException {
 		if (this.readThrough != readThrough) {
 			if (!readThrough && writeThrough) {
-				throw new IllegalStateException(
-						"ReadThrough can only be turned off if WriteThrough is turned off");
+				throw new IllegalStateException("ReadThrough can only be turned off if WriteThrough is turned off");
 			}
 			this.readThrough = readThrough;
 		}
 	}
 
-	public void setWriteThrough(boolean writeThrough) throws SourceException,
-			InvalidValueException {
+	public void setWriteThrough(boolean writeThrough) throws SourceException, InvalidValueException {
 		if (this.writeThrough != writeThrough) {
 			if (writeThrough) {
 				/*
@@ -414,21 +424,14 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 				 * if writeThrough is turned on.
 				 */
 				commit();
-				/*
-				 * Do some cleaning up
-				 */
-				for (JPAContainerItemProperty<T> prop : propertyMap.values()) {
-					prop.clearCache();
-				}
-			} else {
-				/*
-				 * We can iterate directly over the map, as this operation only
-				 * affects existing properties. Properties that are lazily
-				 * created afterwards will work automatically.
-				 */
-				for (JPAContainerItemProperty<T> prop : propertyMap.values()) {
-					prop.cacheRealValue();
-				}
+			}
+			/*
+			 * We can iterate directly over the map, as this operation only
+			 * affects existing properties. Properties that are lazily created
+			 * afterwards will work automatically.
+			 */
+			for (EntityItemProperty<E, ?> prop : propertyMap.values()) {
+				prop.setWriteThrough(writeThrough);
 			}
 			this.writeThrough = writeThrough;
 		}
@@ -441,8 +444,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 		 * list of ids instead of the map.
 		 */
 		for (String propertyId : getItemPropertyIds()) {
-			((Property.ValueChangeNotifier) getItemProperty(propertyId))
-					.addValueChangeListener(listener);
+			((Property.ValueChangeNotifier) getItemProperty(propertyId)).addValueChangeListener(listener);
 		}
 	}
 
@@ -453,8 +455,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 		 * list of ids instead of the map.
 		 */
 		for (String propertyId : getItemPropertyIds()) {
-			((Property.ValueChangeNotifier) getItemProperty(propertyId))
-					.removeValueChangeListener(listener);
+			((Property.ValueChangeNotifier) getItemProperty(propertyId)).removeValueChangeListener(listener);
 		}
 	}
 
@@ -477,8 +478,7 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	@SuppressWarnings("serial")
 	public void refresh() {
 		if (isPersistent()) {
-			T refreshedEntity = getContainer().getEntityProvider()
-					.refreshEntity(getEntity());
+			E refreshedEntity = getContainer().getEntityProvider().refreshEntity(getEntity());
 			if (refreshedEntity == null) {
 				/*
 				 * Entity has been removed, fire item set change for the
@@ -499,16 +499,10 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 				discard();
 			}
 			setDirty(false);
-			// FIXME we could fire only really changed properties
-			Collection<String> itemPropertyIds = getItemPropertyIds();
-			for (String string : itemPropertyIds) {
-				getItemProperty(string).fireValueChangeEvent();
-			}
 		}
 	}
 
-	private void readObject(java.io.ObjectInputStream in) throws IOException,
-			ClassNotFoundException {
+	private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
 		in.defaultReadObject();
 		container.registerItem(this);
 	}
@@ -527,9 +521,8 @@ public final class JPAContainerItem<T> implements EntityItem<T> {
 	/**
 	 * This method will be notified by the property when
 	 * {@link JPAContainerItemProperty#rollback() rollback()} is called
-	 * */
-	public void containerItemPropertyRollbacked(
-			JPAContainerItemProperty<?> property) {
+	 */
+	public void containerItemPropertyRollbacked(JPAContainerItemProperty<E, ?> property) {
 		if (property.isModified()) {
 			modified = true;
 		} else {

@@ -19,11 +19,11 @@ import com.vaadin.data.util.converter.Converter.ConversionException;
  * @author Petter Holmström (Vaadin Ltd)
  * @since 1.0
  */
-public class JPAContainerItemProperty<T> implements EntityItemProperty<T>,
+public class JPAContainerItemProperty<E, T> implements EntityItemProperty<E, T>,
 		Transactional<T> {
 
 	private static final long serialVersionUID = 2791934277775480650L;
-	private JPAContainerItem<T> item;
+	private JPAContainerItem<E> item;
 	private String propertyId;
 	private T cachedValue;
 	private boolean modified;
@@ -39,7 +39,7 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty<T>,
 	 * @param propertyId
 	 *            the property id of the new property (must not be null).
 	 */
-	JPAContainerItemProperty(JPAContainerItem<T> item, String propertyId) {
+	JPAContainerItemProperty(JPAContainerItem<E> item, String propertyId) {
 		assert item != null : "item must not be null";
 		assert propertyId != null : "propertyId must not be null";
 		this.item = item;
@@ -67,33 +67,31 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty<T>,
 		}
 	}
 
+	@Override
+	public void setWriteThrough(boolean writeThrough) {
+		if(writeThrough) {
+			clearCache();
+		}else{
+			cacheRealValue();
+		}
+	}
+	
 	/**
 	 * Caches the real value of the property.
 	 */
-	void cacheRealValue() {
+	private void cacheRealValue() {
 		T realValue = getRealValue();
 		cachedValue = realValue;
 	}
-
+	
 	/**
 	 * Clears the cached value, without notifying any listeners.
 	 */
-	void clearCache() {
+	private void clearCache() {
 		cachedValue = null;
 	}
 
-	/**
-	 * <b>Note! This method assumes that write through is OFF!</b>
-	 * <p>
-	 * Sets the real value to the cached value. If read through is on, the
-	 * listeners are also notified as the value will appear to have changed to
-	 * them.
-	 * <p>
-	 * If the property is read only, nothing happens.
-	 * 
-	 * @throws ConversionException
-	 *             if the real value could not be set for some reason.
-	 */
+	@Override
 	public void commit() throws ConversionException {
 		if (inTransaction) {
 			endTransaction();
@@ -113,13 +111,7 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty<T>,
 
 	}
 
-	/**
-	 * <b>Note! This method assumes that write through is OFF!</b>
-	 * <p>
-	 * Replaces the cached value with the real value. If read through is off,
-	 * the listeners are also notified as the value will appear to have changed
-	 * to them.
-	 */
+	@Override
 	public void discard() {
 		Object realValue = getRealValue();
 
@@ -149,7 +141,7 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty<T>,
 	}
 
 	@Override
-	public EntityItem<?> getItem() {
+	public EntityItem<E> getItem() {
 		return item;
 	}
 
@@ -314,7 +306,7 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty<T>,
 
 		private static final long serialVersionUID = 4999596001491426923L;
 
-		private ValueChangeEvent(JPAContainerItemProperty<T> source) {
+		private ValueChangeEvent(JPAContainerItemProperty<E, T> source) {
 			super(source);
 		}
 
@@ -409,6 +401,7 @@ public class JPAContainerItemProperty<T> implements EntityItemProperty<T>,
 		}
 	}
 	
+	@Override
 	public boolean isModified() {
 		return modified;
 	}

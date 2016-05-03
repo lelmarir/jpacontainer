@@ -1,20 +1,11 @@
-<?xml version="1.0" encoding="ISO-8859-1"?>
-<!DOCTYPE ivy-module [
-	<!ENTITY vaadin.version "7.6.4">
-]>
-<ivy-module version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
-    <info
-        organisation="com.vaadin.addon"
-        module="jpacontainer"
-		revision="${revision}"
-        branch="bonfiglioli"
-        status="integration">
+<?xml version="1.0" encoding="UTF-8"?>
+<ivy-module version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
+    <info organisation="com.vaadin.addon" module="jpacontainer" branch="bonfiglioli" revision="0.9.1.51-SNAPSHOT" status="integration" publication="20160503170343">
 	</info>
 	<configurations>
 		<!-- The default configuration, which should be deployed to the server -->
-		<conf name="default" />
-		<conf name="sources" />
+		<conf name="default"/>
+		<conf name="sources"/>
 		<conf name="test" visibility="private"/>
 	</configurations>
 	<publications>
@@ -22,7 +13,7 @@
 	    <artifact name="jpacontainer-source" conf="sources" type="source" ext="jar"/>
 	</publications>
 	<dependencies>
-		<dependency org="com.vaadin" name="vaadin-server" rev="&vaadin.version;" conf="default->default" />
+		<dependency org="com.vaadin" name="vaadin-server" rev="7.6.4" conf="default->default"/>
 		<dependency org="org.eclipse.persistence" name="javax.persistence" rev="2.0.0"/>
 		<dependency org="javax.transaction" name="transaction-api" rev="1.1"/>
 			

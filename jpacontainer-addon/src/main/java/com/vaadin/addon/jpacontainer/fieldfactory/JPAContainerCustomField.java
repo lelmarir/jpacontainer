@@ -986,7 +986,7 @@ public abstract class JPAContainerCustomField<T> extends CustomComponent
      * 
      * In general, "empty" state is same as null..
      */
-    protected boolean isEmpty() {
+    public boolean isEmpty() {
         return (getValue() == null);
     }
 
