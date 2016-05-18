@@ -33,6 +33,8 @@ import javax.persistence.ManyToOne;
 import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 
+import org.hibernate.SQLQuery.ReturnProperty;
+
 import com.vaadin.addon.jpacontainer.metadata.ClassMetadata;
 import com.vaadin.addon.jpacontainer.metadata.PersistentPropertyMetadata;
 import com.vaadin.addon.jpacontainer.metadata.PropertyKind;
@@ -82,10 +84,12 @@ final class PropertyList<E> implements Serializable {
 			}
 		}
 
+		@SuppressWarnings("unchecked")
 		@Override
-		public T getPropertyValue(E object) {
-			assert object != null : "entity must not be null";
-			return (T) PropertyList.this.metadata.getPropertyValue(object, getPropertyId());
+		public T getPropertyValue(EntityItem<E> entityItem) {
+			assert entityItem != null : "entityItem must not be null";
+			assert entityItem.getEntity() != null : "entity must not be null";
+			return (T) PropertyList.this.metadata.getPropertyValue(entityItem.getEntity(), getPropertyId());
 		}
 
 		@Override
@@ -425,8 +429,12 @@ final class PropertyList<E> implements Serializable {
 		}
 	}
 
-	public PropertyDefinition<E, Object> getProperty(String propertyName) {
-		return getProperty(propertyName, false);
+	public PropertyDefinition<E, Object> getProperty(String propertyName) throws IllegalArgumentException {
+		PropertyDefinition<E, Object> property = getProperty(propertyName, false);
+		if (property == null) {
+			throw new IllegalArgumentException("Illegal property name: " + propertyName);
+		}
+		return property;
 	}
 
 	private PropertyDefinition<E, Object> getOrCreateProperty(String propertyName) {
@@ -437,53 +445,51 @@ final class PropertyList<E> implements Serializable {
 			throws IllegalArgumentException {
 		if (properties.containsKey(propertyName)) {
 			return properties.get(propertyName);
-		} else if (createIfNotExists) {
-			try {
-				if (isNestedProperty(propertyName)) {
-					// Try with the parent
-					int offset = propertyName.lastIndexOf('.');
-					String parentName = propertyName.substring(0, offset);
-					String name = propertyName.substring(offset + 1);
-					PropertyDefinition<E, ?> parentProperty = getProperty(parentName, true);
-					NestedPropertyDefinition property;
-					if (parentProperty instanceof PropertyList.NestedPersistentProprtyDefinition) {
-						ClassMetadata<?> parentClassMetadata = ((PropertyList<E>.NestedPersistentProprtyDefinition<?>) parentProperty)
-								.getTypeMetadata();
-						PropertyMetadata pm = parentClassMetadata.getProperty(name);
-						if (pm == null) {
-							throw new IllegalArgumentException("Invalid property name");
-						} else {
-							property = new NestedPersistentProprtyDefinition(parentProperty, pm);
-						}
-					} else if (parentProperty instanceof PropertyList.NestedTransientProprtyDefinition) {
-						Class<?> parentType = ((PropertyList<E>.NestedTransientProprtyDefinition<?>) parentProperty)
-								.getType();
-						Method getter = getGetterMethod(name, parentType);
-						if (getter == null) {
-							throw new IllegalArgumentException("Invalid property name");
-						} else {
-							property = new NestedTransientProprtyDefinition(parentProperty, getter);
-						}
-					} else {
-						throw new UnsupportedOperationException("Unhandled parent property type ("
-								+ parentProperty.getClass() + "): " + parentProperty);
-					}
-					return property;
-				} else {
-					// There are no more parent properties
-					PropertyMetadata pm = metadata.getProperty(propertyName);
+		}
+		if (parentList != null) {
+			PropertyDefinition<E, Object> p = parentList.getProperty(propertyName, false);
+			if (p != null) {
+				return p;
+			}
+		}
+		if (createIfNotExists) {
+			if (isNestedProperty(propertyName)) {
+				// Try with the parent
+				int offset = propertyName.lastIndexOf('.');
+				String parentName = propertyName.substring(0, offset);
+				String name = propertyName.substring(offset + 1);
+				PropertyDefinition<E, ?> parentProperty = getProperty(parentName, createIfNotExists);
+				NestedPropertyDefinition property;
+				if (parentProperty instanceof PropertyList.NestedPersistentProprtyDefinition) {
+					ClassMetadata<?> parentClassMetadata = ((PropertyList<E>.NestedPersistentProprtyDefinition<?>) parentProperty)
+							.getTypeMetadata();
+					PropertyMetadata pm = parentClassMetadata.getProperty(name);
 					if (pm == null) {
 						throw new IllegalArgumentException("Invalid property name");
 					} else {
-						MetadataPropertyDefinition<Object> property = new MetadataPropertyDefinition(pm);
-						return property;
+						property = new NestedPersistentProprtyDefinition(parentProperty, pm);
 					}
-				}
-			} catch (IllegalArgumentException e) {
-				if (parentList == null) {
-					throw e;
+				} else if (parentProperty instanceof PropertyList.NestedTransientProprtyDefinition) {
+					Class<?> parentType = ((PropertyList<E>.NestedTransientProprtyDefinition<?>) parentProperty)
+							.getType();
+					Method getter = getGetterMethod(name, parentType);
+					if (getter == null) {
+						throw new IllegalArgumentException("Invalid property name");
+					} else {
+						property = new NestedTransientProprtyDefinition(parentProperty, getter);
+					}
 				} else {
-					return parentList.getProperty(propertyName, true);
+					throw new UnsupportedOperationException(
+							"Unhandled parent property type (" + parentProperty.getClass() + "): " + parentProperty);
+				}
+				return property;
+			} else {
+				PropertyMetadata pm = metadata.getProperty(propertyName);
+				if (pm == null) {
+					throw new IllegalArgumentException("Invalid property name");
+				} else {
+					MetadataPropertyDefinition<Object> property = new MetadataPropertyDefinition(pm);
+					return property;
 				}
 			}
 		} else {
@@ -725,13 +731,13 @@ final class PropertyList<E> implements Serializable {
 	 * @throws IllegalArgumentException
 	 *             if the property name was illegal.
 	 */
-	public Object getPropertyValue(E object, String propertyName) throws IllegalArgumentException {
+	public Object getPropertyValue(EntityItem<E> entityItem, String propertyName) throws IllegalArgumentException {
 		assert propertyName != null : "propertyName must not be null";
-		assert object != null : "object must not be null";
+		assert entityItem != null : "entityItem must not be null";
 		if (!getAllAvailablePropertyNames().contains(propertyName)) {
 			throw new IllegalArgumentException("Illegal property name: " + propertyName);
 		}
-		return getProperty(propertyName).getPropertyValue(object);
+		return getProperty(propertyName).getPropertyValue(entityItem);
 	}
 
 	/**

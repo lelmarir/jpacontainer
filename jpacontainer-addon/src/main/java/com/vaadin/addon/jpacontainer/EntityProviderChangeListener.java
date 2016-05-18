@@ -16,8 +16,6 @@
 
 package com.vaadin.addon.jpacontainer;
 
-import java.io.Serializable;
-
 /**
  * Listener interface to be implemented by classes that want to be notified when
  * the contents of a {@link EntityProvider} is changed (e.g. entities are added
@@ -27,7 +25,7 @@ import java.io.Serializable;
  * @author Petter Holmström (Vaadin Ltd)
  * @since 1.0
  */
-public interface EntityProviderChangeListener<T> extends Serializable {
+public interface EntityProviderChangeListener<T> {
 
     /**
      * Notifies the client that <code>event</code> has occurred.

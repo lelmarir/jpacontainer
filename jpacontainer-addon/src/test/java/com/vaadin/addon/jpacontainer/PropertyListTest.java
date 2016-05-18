@@ -557,20 +557,26 @@ public class PropertyListTest {
 
     @Test
     public void testGetPropertyValue_TransientProperty() {
+    	
         Person p = new Person();
         p.setFirstName("Joe");
         p.setLastName("Cool");
-        assertEquals("Joe Cool", propertyList.getPropertyValue(p, "fullName"));
+        JPAContainer<Person> contaienr = new JPAContainer<>(Person.class);
+        JPAContainerItem<Person> item = new JPAContainerItem<Person>(contaienr, p);
+        
+        assertEquals("Joe Cool", propertyList.getPropertyValue(item, "fullName"));
         assertEquals("Joe Cool",
-                childPropertyList.getPropertyValue(p, "fullName"));
+                childPropertyList.getPropertyValue(item, "fullName"));
     }
 
     @Test
     public void testGetPropertyValue_PersistentProperty() {
         Person p = new Person();
         p.setFirstName("Joe");
-        assertEquals("Joe", propertyList.getPropertyValue(p, "firstName"));
-        assertEquals("Joe", childPropertyList.getPropertyValue(p, "firstName"));
+        JPAContainer<Person> contaienr = new JPAContainer<>(Person.class);
+        JPAContainerItem<Person> item = new JPAContainerItem<Person>(contaienr, p);
+        assertEquals("Joe", propertyList.getPropertyValue(item, "firstName"));
+        assertEquals("Joe", childPropertyList.getPropertyValue(item, "firstName"));
     }
 
     @Test
@@ -578,11 +584,13 @@ public class PropertyListTest {
         Person p = new Person();
         propertyList.addNestedProperty("transientAddress.street");
         propertyList.addNestedProperty("address.fullAddress");
-        assertNull(propertyList.getPropertyValue(p, "transientAddress.street"));
-        assertNull(propertyList.getPropertyValue(p, "address.fullAddress"));
-        assertNull(childPropertyList.getPropertyValue(p,
+        JPAContainer<Person> contaienr = new JPAContainer<>(Person.class);
+        JPAContainerItem<Person> item = new JPAContainerItem<Person>(contaienr, p);
+        assertNull(propertyList.getPropertyValue(item, "transientAddress.street"));
+        assertNull(propertyList.getPropertyValue(item, "address.fullAddress"));
+        assertNull(childPropertyList.getPropertyValue(item,
                 "transientAddress.street"));
-        assertNull(childPropertyList.getPropertyValue(p, "address.fullAddress"));
+        assertNull(childPropertyList.getPropertyValue(item, "address.fullAddress"));
 
         // transientAddress and address return the same value
         p.setAddress(new Address());
@@ -591,35 +599,39 @@ public class PropertyListTest {
         p.getAddress().setPostOffice("Office");
 
         assertEquals("Street",
-                propertyList.getPropertyValue(p, "transientAddress.street"));
+                propertyList.getPropertyValue(item, "transientAddress.street"));
         assertEquals("Street Code Office",
-                propertyList.getPropertyValue(p, "address.fullAddress"));
-        assertEquals("Street", childPropertyList.getPropertyValue(p,
+                propertyList.getPropertyValue(item, "address.fullAddress"));
+        assertEquals("Street", childPropertyList.getPropertyValue(item,
                 "transientAddress.street"));
         assertEquals("Street Code Office",
-                childPropertyList.getPropertyValue(p, "address.fullAddress"));
+                childPropertyList.getPropertyValue(item, "address.fullAddress"));
     }
 
     @Test
     public void testGetPropertyValue_NestedPersistentProperty() {
         Person p = new Person();
         propertyList.addNestedProperty("address.street");
-        assertNull(propertyList.getPropertyValue(p, "address.street"));
-        assertNull(childPropertyList.getPropertyValue(p, "address.street"));
+        JPAContainer<Person> contaienr = new JPAContainer<>(Person.class);
+        JPAContainerItem<Person> item = new JPAContainerItem<Person>(contaienr, p);
+        assertNull(propertyList.getPropertyValue(item, "address.street"));
+        assertNull(childPropertyList.getPropertyValue(item, "address.street"));
 
         p.setAddress(new Address());
         p.getAddress().setStreet("Hello World");
         assertEquals("Hello World",
-                propertyList.getPropertyValue(p, "address.street"));
+                propertyList.getPropertyValue(item, "address.street"));
         assertEquals("Hello World",
-                childPropertyList.getPropertyValue(p, "address.street"));
+                childPropertyList.getPropertyValue(item, "address.street"));
     }
 
     @Test
     public void testGetPropertyValue_Invalid() {
         Person p = new Person();
+        JPAContainer<Person> contaienr = new JPAContainer<>(Person.class);
+        JPAContainerItem<Person> item = new JPAContainerItem<Person>(contaienr, p);
         try {
-            propertyList.getPropertyValue(p, "nonexistent");
+            propertyList.getPropertyValue(item, "nonexistent");
             fail("No exception thrown");
         } catch (IllegalArgumentException e) {
             // OK.
@@ -627,7 +639,7 @@ public class PropertyListTest {
 
         try {
             // Valid property name, but has not been added
-            propertyList.getPropertyValue(p, "address.street");
+            propertyList.getPropertyValue(item, "address.street");
             fail("No exception thrown");
         } catch (IllegalArgumentException e) {
             // OK.

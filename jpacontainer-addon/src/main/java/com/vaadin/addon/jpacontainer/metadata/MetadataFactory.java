@@ -183,8 +183,8 @@ public class MetadataFactory {
 		Class<?> superclass = type.getSuperclass();
 		if (superclass != null
 				&& (superclass.getAnnotation(MappedSuperclass.class) != null || superclass
-						.getAnnotation(Entity.class) != null)
-				|| superclass.getAnnotation(Embeddable.class) != null) {
+						.getAnnotation(Entity.class) != null
+				|| superclass.getAnnotation(Embeddable.class) != null)) {
 			loadProperties(superclass, metadata, accessType);
 		}
 

@@ -10,7 +10,7 @@ public abstract class PropertyDefinition<E, T> {
 		;
 	}
 
-	public abstract T getPropertyValue(E object);
+	public abstract T getPropertyValue(EntityItem<E> entityItem);
 
 	public abstract void setPropertyValue(E object, T propertyValue) throws ReadOnlyException;
 	

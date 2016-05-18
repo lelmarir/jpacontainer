@@ -189,7 +189,7 @@ public final class JPAContainerItem<E> implements EntityItem<E> {
 	}
 
 	public Object getItemPropertyValue(String propertyName) {
-		return getPropertyList().getPropertyValue(entity, propertyName);
+		return getPropertyList().getPropertyValue(this, propertyName);
 	}
 
 	public boolean isItemPropertyWritable(String propertyName) {
@@ -242,7 +242,7 @@ public final class JPAContainerItem<E> implements EntityItem<E> {
 		if (modified == null) { // is an unknown item properties modified state
 			for (EntityItemProperty<E, ?> prop : propertyMap.values()) {
 				if (prop.isModified()) {
-					return modified;
+					return true;
 				}
 			}
 			return false;
@@ -350,20 +350,18 @@ public final class JPAContainerItem<E> implements EntityItem<E> {
 		}
 
 		if (!this.entity.equals(entity)) {
-			logger.log(Level.WARNING, "A JPA entity should always be equal to a subsequent loaded instance");
+			logger.log(Level.WARNING, "A JPA entity should always be equal to a subsequent loaded instance: !("
+					+ this.entity + ").equals(" + entity + ")");
 		}
 
 		this.entity = entity;
 
 		if (changedProperties == null || changedProperties.isEmpty()) {
 			// FIXME we could fire only really changed properties
-			for (String id : getPropertyList().getAllAvailablePropertyNames()) {
-				getItemProperty(id).fireValueChangeEvent();
-			}
-		} else {
-			for (String id : changedProperties) {
-				getItemProperty(id).fireValueChangeEvent();
-			}
+			changedProperties = getPropertyList().getAllAvailablePropertyNames();
+		}
+		for (String id : changedProperties) {
+			getItemProperty(id).fireValueChangeEvent();
 		}
 	}
 

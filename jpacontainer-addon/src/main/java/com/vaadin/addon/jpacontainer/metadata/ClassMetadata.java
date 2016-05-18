@@ -240,6 +240,7 @@ public class ClassMetadata<E> implements Serializable {
                         }
                     }
                 }
+                assert property.setter != null;
                 property.setter.invoke(object, value);
             } catch (IllegalAccessException e) {
                 throw new IllegalArgumentException(

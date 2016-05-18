@@ -91,16 +91,17 @@ import com.vaadin.data.util.filter.UnsupportedFilterException;
  * is used or not. Therefore, this feature should be used with care in
  * production systems.
  * 
- * <h2>Buffering</h2>
- * Here follows some notes on how buffering has been implemented in this class.
- * If you are not going to use buffering, you can skip this section.
+ * <h2>Buffering</h2> Here follows some notes on how buffering has been
+ * implemented in this class. If you are not going to use buffering, you can
+ * skip this section.
  * <p>
  * When using buffered mode, the following rules apply:
  * <ul>
  * <li>All operations that add, update or remove entities are recorded
  * internally.</li>
  * <li>If an item is added and then removed later within the same transaction,
- * the add operation will be removed and no update operation will be recorded.</li>
+ * the add operation will be removed and no update operation will be recorded.
+ * </li>
  * <li>If an item is added and then updated later within the same transaction,
  * only the add operation will be recorded.</li>
  * <li>If an item is updated and then removed later within the same transaction,
@@ -126,9 +127,8 @@ import com.vaadin.data.util.filter.UnsupportedFilterException;
  * @author Petter Holmström (Vaadin Ltd)
  * @since 1.0
  */
-public class JPAContainer<T> implements EntityContainer<T>,
-		EntityProviderChangeListener<T>, HierarchicalEntityContainer<T>,
-		Container.Indexed {
+public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChangeListener<T>,
+		HierarchicalEntityContainer<T>, Container.Indexed {
 
 	private static final long serialVersionUID = -4031940552175752858L;
 	/**
@@ -169,8 +169,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 */
 	public JPAContainer(Class<T> entityClass) {
 		assert entityClass != null : "entityClass must not be null";
-		this.entityClassMetadata = MetadataFactory.getInstance()
-				.getEntityClassMetadata(entityClass);
+		this.entityClassMetadata = MetadataFactory.getInstance().getEntityClassMetadata(entityClass);
 		this.propertyList = new PropertyList<T>(entityClassMetadata);
 		this.filterSupport = new AdvancedFilterableSupport();
 		this.bufferingDelegate = new BufferedContainerDelegate<T>(this);
@@ -179,23 +178,21 @@ public class JPAContainer<T> implements EntityContainer<T>,
 		 * Add a listener to filterSupport, so that we can notify all clients
 		 * that use our container that the data has been filtered.
 		 */
-		this.filterSupport
-				.addListener(new AdvancedFilterableSupport.ApplyFiltersListener() {
+		this.filterSupport.addListener(new AdvancedFilterableSupport.ApplyFiltersListener() {
 
-					private static final long serialVersionUID = -23196201919497112L;
+			private static final long serialVersionUID = -23196201919497112L;
 
-					@Override
-					public void filtersApplied(FilterAppliedEvent event) {
-						fireFiltersAppliedEvent(event);
-						
-					}
-				});
+			@Override
+			public void filtersApplied(FilterAppliedEvent event) {
+				fireFiltersAppliedEvent(event);
+
+			}
+		});
 		updateFilterablePropertyIds();
 	}
 
 	protected void fireFiltersAppliedEvent(FilterAppliedEvent event) {
-		fireContainerItemSetChange(new FiltersAppliedEvent<JPAContainer<T>>(
-				JPAContainer.this));
+		fireContainerItemSetChange(new FiltersAppliedEvent<JPAContainer<T>>(JPAContainer.this));
 	}
 
 	private Collection<String> additionalFilterablePropertyIds;
@@ -273,8 +270,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 		if (listeners == null || !fireContainerItemSetChangeEvents) {
 			return;
 		}
-		LinkedList<ItemSetChangeListener> list = (LinkedList<ItemSetChangeListener>) listeners
-				.clone();
+		LinkedList<ItemSetChangeListener> list = new LinkedList<ItemSetChangeListener>(listeners);
 		for (ItemSetChangeListener l : list) {
 			l.containerItemSetChange(event);
 		}
@@ -304,8 +300,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	}
 
 	@Override
-	public void addNestedContainerProperty(String nestedProperty)
-			throws UnsupportedOperationException {
+	public void addNestedContainerProperty(String nestedProperty) throws UnsupportedOperationException {
 		propertyList.addNestedProperty(nestedProperty);
 		updateFilterablePropertyIds();
 	}
@@ -327,8 +322,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 * @throws IllegalStateException
 	 *             if the entity provider was null.
 	 */
-	protected EntityProvider<T> doGetEntityProvider()
-			throws IllegalStateException {
+	protected EntityProvider<T> doGetEntityProvider() throws IllegalStateException {
 		if (entityProvider == null) {
 			throw new IllegalStateException("No EntityProvider has been set");
 		}
@@ -337,8 +331,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 
 	@Override
 	public boolean isReadOnly() {
-		return !(doGetEntityProvider() instanceof MutableEntityProvider)
-				|| readOnly;
+		return !(doGetEntityProvider() instanceof MutableEntityProvider) || readOnly;
 	}
 
 	@Override
@@ -346,10 +339,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	public void setEntityProvider(EntityProvider<T> entityProvider) {
 		assert entityProvider != null : "entityProvider must not be null";
 		// Remove listener from old provider
-		if (this.entityProvider != null
-				&& this.entityProvider instanceof EntityProviderChangeNotifier) {
-			((EntityProviderChangeNotifier<T>) this.entityProvider)
-					.removeListener(this);
+		if (this.entityProvider != null && this.entityProvider instanceof EntityProviderChangeNotifier) {
+			((EntityProviderChangeNotifier<T>) this.entityProvider).removeListener(this);
 		}
 		this.entityProvider = entityProvider;
 		// Register listener with new provider
@@ -359,13 +350,11 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	@SuppressWarnings("unchecked")
 	private void registerProvider() {
 		if (this.entityProvider instanceof EntityProviderChangeNotifier) {
-			((EntityProviderChangeNotifier<T>) this.entityProvider)
-					.addListener(this);
+			((EntityProviderChangeNotifier<T>) this.entityProvider).addListener(this);
 		}
 	}
 
-	private void readObject(java.io.ObjectInputStream in) throws IOException,
-			ClassNotFoundException {
+	private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
 		in.defaultReadObject();
 		// reattach to weak listener list of provider
 		registerProvider();
@@ -383,8 +372,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 *            true fo fire an ItemSetChangeEvent when the provider changes,
 	 *            false not to.
 	 */
-	protected void setFireItemSetChangeOnProviderChange(
-			boolean fireItemSetChangeOnProviderChange) {
+	protected void setFireItemSetChangeOnProviderChange(boolean fireItemSetChangeOnProviderChange) {
 		this.fireItemSetChangeOnProviderChange = fireItemSetChangeOnProviderChange;
 	}
 
@@ -399,8 +387,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 
 	@Override
 	public void entityProviderChange(EntityProviderChangeEvent<T> event) {
-		if (isItemSetChangeEvent(event)
-				&& isFireItemSetChangeOnProviderChange()) {
+		if (isItemSetChangeEvent(event) && isFireItemSetChangeOnProviderChange()) {
 			fireContainerItemSetChange(new ProviderChangedEvent(event));
 		} else {
 			if (event instanceof EntityPropertyUpdatedEvent) {
@@ -414,9 +401,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 				for (T t : affectedEntities) {
 					if (entityClassMetadata.hasIdentifierProperty()) {
 						Object itemId = getIdentifierPropertyValue(t);
-						firePropertyValueChangeEvent(itemId,
-								((EntityPropertyUpdatedEvent<T>) event)
-										.getPropertyId());
+						firePropertyValueChangeEvent(itemId, ((EntityPropertyUpdatedEvent<T>) event).getPropertyId());
 					}
 				}
 			}
@@ -424,26 +409,33 @@ public class JPAContainer<T> implements EntityContainer<T>,
 
 	}
 
-	@SuppressWarnings("unchecked")
-	protected void firePropertyValueChangeEvent(Object itemId, String propertyId) {
-		LinkedList<WeakReference<JPAContainerItem<T>>> linkedList;
+	protected void firePropertyValueChangeEvent(Object itemId, String... propertyIds) {
+		LinkedList<JPAContainerItem<T>> list;
 		synchronized (getItemRegistry()) {
-			LinkedList<WeakReference<JPAContainerItem<T>>> origList = getItemRegistry()
-					.get(itemId);
-			if (origList != null) {
-				linkedList = (LinkedList<WeakReference<JPAContainerItem<T>>>) origList
-						.clone();
+			LinkedList<WeakReference<JPAContainerItem<T>>> itemRegitry = getItemRegistry().get(itemId);
+			if (itemRegitry != null) {
+				list = new LinkedList<>();
+				Iterator<WeakReference<JPAContainerItem<T>>> it = itemRegitry.iterator();
+				while (it.hasNext()) {
+					JPAContainerItem<T> i = it.next().get();
+					if (i != null) {
+						list.add(i);
+					} else {
+						it.remove();
+					}
+				}
+				if (itemRegitry.isEmpty()) {
+					getItemRegistry().remove(itemId);
+				}
 			} else {
 				return;
 			}
 		}
-		for (Iterator<WeakReference<JPAContainerItem<T>>> iterator = linkedList
-				.iterator(); iterator.hasNext();) {
-			WeakReference<JPAContainerItem<T>> weakReference = iterator.next();
-			JPAContainerItem<T> jpaContainerItem = weakReference.get();
-			if (jpaContainerItem != null) {
-				EntityItemProperty itemProperty = jpaContainerItem
-						.getItemProperty(propertyId);
+		
+		for (Iterator<JPAContainerItem<T>> iterator = list.iterator(); iterator.hasNext();) {
+			JPAContainerItem<T> jpaContainerItem = iterator.next();
+			for (String propertyId : propertyIds) {
+				EntityItemProperty itemProperty = jpaContainerItem.getItemProperty(propertyId);
 				itemProperty.fireValueChangeEvent();
 			}
 		}
@@ -457,16 +449,14 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	}
 
 	@Override
-	public void setReadOnly(boolean readOnly)
-			throws UnsupportedOperationException {
+	public void setReadOnly(boolean readOnly) throws UnsupportedOperationException {
 		if (readOnly) {
 			this.readOnly = readOnly;
 		} else {
 			if (doGetEntityProvider() instanceof MutableEntityProvider) {
 				this.readOnly = readOnly;
 			} else {
-				throw new UnsupportedOperationException(
-						"EntityProvider is not mutable");
+				throw new UnsupportedOperationException("EntityProvider is not mutable");
 			}
 		}
 	}
@@ -503,8 +493,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 *             container
 	 * @since 1.2.1
 	 */
-	public void setSortProperty(String propertyId, String sortProperty)
-			throws IllegalArgumentException {
+	public void setSortProperty(String propertyId, String sortProperty) throws IllegalArgumentException {
 		propertyList.setSortProperty(propertyId, sortProperty);
 	}
 
@@ -522,14 +511,11 @@ public class JPAContainer<T> implements EntityContainer<T>,
 		assert propertyId.length == ascending.length : "propertyId and ascending must have the same length";
 		sortByList = new LinkedList<SortBy>();
 		for (int i = 0; i < propertyId.length; ++i) {
-			if (!getSortableContainerPropertyIds().contains(
-					propertyId[i].toString())) {
-				throw new IllegalArgumentException(
-						"No such sortable property ID: " + propertyId[i]);
+			if (!getSortableContainerPropertyIds().contains(propertyId[i].toString())) {
+				throw new IllegalArgumentException("No such sortable property ID: " + propertyId[i]);
 			}
 			// #7711 map property ID to a sortable sub-property if configured
-			Object sortProperty = propertyList.getSortablePropertyMap().get(
-					propertyId[i]);
+			Object sortProperty = propertyList.getSortablePropertyMap().get(propertyId[i]);
 			sortByList.add(new SortBy(sortProperty.toString(), ascending[i]));
 		}
 		sortByList = Collections.unmodifiableList(sortByList);
@@ -557,8 +543,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 * {@inheritDoc }
 	 */
 	@Override
-	public Object addItemAfter(Object previousItemId)
-			throws UnsupportedOperationException {
+	public Object addItemAfter(Object previousItemId) throws UnsupportedOperationException {
 		throw new UnsupportedOperationException();
 	}
 
@@ -569,18 +554,16 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 * {@inheritDoc }
 	 */
 	@Override
-	public Item addItemAfter(Object previousItemId, Object newItemId)
-			throws UnsupportedOperationException {
+	public Item addItemAfter(Object previousItemId, Object newItemId) throws UnsupportedOperationException {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public Object firstItemId() {
 		if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()) {
-			Object itemId = doGetEntityProvider().getFirstEntityIdentifier(
-					this, getAppliedFiltersAsConjunction(), getSortByList());
-			if (itemId != null && !isWriteThrough()
-					&& bufferingDelegate.getDeletedItemIds().contains(itemId)) {
+			Object itemId = doGetEntityProvider().getFirstEntityIdentifier(this, getAppliedFiltersAsConjunction(),
+					getSortByList());
+			if (itemId != null && !isWriteThrough() && bufferingDelegate.getDeletedItemIds().contains(itemId)) {
 				itemId = nextItemId(itemId);
 			}
 			return itemId;
@@ -603,14 +586,13 @@ public class JPAContainer<T> implements EntityContainer<T>,
 
 	@Override
 	public Object lastItemId() {
-		Object itemId = doGetEntityProvider().getLastEntityIdentifier(this,
-				getAppliedFiltersAsConjunction(), getSortByList());
+		Object itemId = doGetEntityProvider().getLastEntityIdentifier(this, getAppliedFiltersAsConjunction(),
+				getSortByList());
 		if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()) {
 			return itemId;
 		} else {
 			if (itemId == null) {
-				return bufferingDelegate.getAddedItemIds().get(
-						bufferingDelegate.getAddedItemIds().size() - 1);
+				return bufferingDelegate.getAddedItemIds().get(bufferingDelegate.getAddedItemIds().size() - 1);
 			} else {
 				return itemId;
 			}
@@ -621,22 +603,18 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	public Object nextItemId(Object itemId) {
 		// Note, we do not check if given itemId is deleted as we use this
 		// method recursively to get itemId that is not deleted
-		if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()
-				|| !bufferingDelegate.isAdded(itemId)) {
-			Object id = doGetEntityProvider().getNextEntityIdentifier(this,
-					itemId, getAppliedFiltersAsConjunction(), getSortByList());
-			if (id != null && !isWriteThrough()
-					&& bufferingDelegate.isDeleted(id)) {
+		if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty() || !bufferingDelegate.isAdded(itemId)) {
+			Object id = doGetEntityProvider().getNextEntityIdentifier(this, itemId, getAppliedFiltersAsConjunction(),
+					getSortByList());
+			if (id != null && !isWriteThrough() && bufferingDelegate.isDeleted(id)) {
 				id = nextItemId(id);
 			}
 			return id;
 		} else {
 			int ix = bufferingDelegate.getAddedItemIds().indexOf(itemId);
 			if (ix == bufferingDelegate.getAddedItemIds().size() - 1) {
-				Object id = doGetEntityProvider()
-						.getFirstEntityIdentifier(this,
-								getAppliedFiltersAsConjunction(),
-								getSortByList());
+				Object id = doGetEntityProvider().getFirstEntityIdentifier(this, getAppliedFiltersAsConjunction(),
+						getSortByList());
 				if (id != null && bufferingDelegate.isDeleted(id)) {
 					id = nextItemId(id);
 				}
@@ -652,10 +630,9 @@ public class JPAContainer<T> implements EntityContainer<T>,
 		// Note, we do not check if given itemId is deleted as we use this
 		// method recursively to get itemId that is not deleted
 		if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()) {
-			Object id = doGetEntityProvider().getPreviousEntityIdentifier(this,
-					itemId, getAppliedFiltersAsConjunction(), getSortByList());
-			if (id != null && !isWriteThrough()
-					&& bufferingDelegate.isDeleted(id)) {
+			Object id = doGetEntityProvider().getPreviousEntityIdentifier(this, itemId,
+					getAppliedFiltersAsConjunction(), getSortByList());
+			if (id != null && !isWriteThrough() && bufferingDelegate.isDeleted(id)) {
 				id = prevItemId(id);
 			}
 			return id;
@@ -668,16 +645,12 @@ public class JPAContainer<T> implements EntityContainer<T>,
 					return bufferingDelegate.getAddedItemIds().get(ix - 1);
 				}
 			} else {
-				Object prevId = doGetEntityProvider()
-						.getPreviousEntityIdentifier(this, itemId,
-								getAppliedFiltersAsConjunction(),
-								getSortByList());
+				Object prevId = doGetEntityProvider().getPreviousEntityIdentifier(this, itemId,
+						getAppliedFiltersAsConjunction(), getSortByList());
 				if (prevId == null) {
-					return bufferingDelegate.getAddedItemIds().get(
-							bufferingDelegate.getAddedItemIds().size() - 1);
+					return bufferingDelegate.getAddedItemIds().get(bufferingDelegate.getAddedItemIds().size() - 1);
 				} else {
-					if (!isWriteThrough()
-							&& bufferingDelegate.isDeleted(prevId)) {
+					if (!isWriteThrough() && bufferingDelegate.isDeleted(prevId)) {
 						prevId = prevItemId(prevId);
 					}
 					return prevId;
@@ -693,15 +666,15 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 * {@inheritDoc }
 	 */
 	@Override
-	public boolean addContainerProperty(Object propertyId, Class<?> type,
-			Object defaultValue) throws UnsupportedOperationException {
+	public boolean addContainerProperty(Object propertyId, Class<?> type, Object defaultValue)
+			throws UnsupportedOperationException {
 		throw new UnsupportedOperationException();
 	}
-	
+
 	public boolean addContainerProperty(PropertyDefinition definition) throws UnsupportedOperationException {
 		propertyList.addProperty(definition);
 		return true;
-		
+
 	}
 
 	/**
@@ -778,13 +751,10 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 */
 	protected boolean doContainsId(Object itemId) {
 		if (isWriteThrough()) {
-			return doGetEntityProvider().containsEntity(this, itemId,
-					getAppliedFiltersAsConjunction());
+			return doGetEntityProvider().containsEntity(this, itemId, getAppliedFiltersAsConjunction());
 		} else {
-			return bufferingDelegate.isAdded(itemId)
-					|| (!bufferingDelegate.isDeleted(itemId) && doGetEntityProvider()
-							.containsEntity(this, itemId,
-									getAppliedFiltersAsConjunction()));
+			return bufferingDelegate.isAdded(itemId) || (!bufferingDelegate.isDeleted(itemId)
+					&& doGetEntityProvider().containsEntity(this, itemId, getAppliedFiltersAsConjunction()));
 		}
 	}
 
@@ -828,23 +798,20 @@ public class JPAContainer<T> implements EntityContainer<T>,
 		}
 		if (isWriteThrough() || !bufferingDelegate.isModified()) {
 			T entity = doGetEntityProvider().getEntity(this, itemId);
-			return entity != null ? new JPAContainerItem<T>(this, entity)
-					: null;
+			return entity != null ? new JPAContainerItem<T>(this, entity) : null;
 		} else {
 			if (bufferingDelegate.isAdded(itemId)) {
-				JPAContainerItem<T> item = new JPAContainerItem<T>(this,
-						bufferingDelegate.getAddedEntity(itemId), itemId, false);
+				JPAContainerItem<T> item = new JPAContainerItem<T>(this, bufferingDelegate.getAddedEntity(itemId),
+						itemId, false);
 				return item;
 			} else if (bufferingDelegate.isUpdated(itemId)) {
-				JPAContainerItem<T> item = new JPAContainerItem<T>(this,
-						bufferingDelegate.getUpdatedEntity(itemId));
+				JPAContainerItem<T> item = new JPAContainerItem<T>(this, bufferingDelegate.getUpdatedEntity(itemId));
 				item.setDirty(true);
 				return item;
 			} else if (bufferingDelegate.isDeleted(itemId)) {
 				T entity = doGetEntityProvider().getEntity(this, itemId);
 				if (entity != null) {
-					JPAContainerItem<T> item = new JPAContainerItem<T>(this,
-							entity);
+					JPAContainerItem<T> item = new JPAContainerItem<T>(this, entity);
 					item.setDeleted(true);
 					return item;
 				} else {
@@ -852,8 +819,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 				}
 			} else {
 				T entity = doGetEntityProvider().getEntity(this, itemId);
-				return entity != null ? new JPAContainerItem<T>(this, entity)
-						: null;
+				return entity != null ? new JPAContainerItem<T>(this, entity) : null;
 			}
 		}
 	}
@@ -874,11 +840,9 @@ public class JPAContainer<T> implements EntityContainer<T>,
 						.get(item.getItemId());
 				if (listOfItemsForEntity == null) {
 					listOfItemsForEntity = new LinkedList<WeakReference<JPAContainerItem<T>>>();
-					getItemRegistry().put(item.getItemId(),
-							listOfItemsForEntity);
+					getItemRegistry().put(item.getItemId(), listOfItemsForEntity);
 				}
-				listOfItemsForEntity
-						.add(new WeakReference<JPAContainerItem<T>>(item));
+				listOfItemsForEntity.add(new WeakReference<JPAContainerItem<T>>(item));
 			}
 		}
 	}
@@ -896,14 +860,11 @@ public class JPAContainer<T> implements EntityContainer<T>,
 			Iterator<Entry<Object, LinkedList<WeakReference<JPAContainerItem<T>>>>> entryIterator = getItemRegistry()
 					.entrySet().iterator();
 			while (entryIterator.hasNext()) {
-				Entry<Object, LinkedList<WeakReference<JPAContainerItem<T>>>> entry = entryIterator
-						.next();
-				LinkedList<WeakReference<JPAContainerItem<T>>> linkedList = entry
-						.getValue();
-				for (Iterator<WeakReference<JPAContainerItem<T>>> itemsIterator = linkedList
-						.iterator(); itemsIterator.hasNext();) {
-					WeakReference<JPAContainerItem<T>> ref = itemsIterator
-							.next();
+				Entry<Object, LinkedList<WeakReference<JPAContainerItem<T>>>> entry = entryIterator.next();
+				LinkedList<WeakReference<JPAContainerItem<T>>> linkedList = entry.getValue();
+				for (Iterator<WeakReference<JPAContainerItem<T>>> itemsIterator = linkedList.iterator(); itemsIterator
+						.hasNext();) {
+					WeakReference<JPAContainerItem<T>> ref = itemsIterator.next();
 					if (ref.get() == null) {
 						itemsIterator.remove();
 					}
@@ -924,8 +885,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 */
 	@Override
 	public Collection<Object> getItemIds() {
-		Collection<Object> ids = getEntityProvider().getAllEntityIdentifiers(
-				this, getAppliedFiltersAsConjunction(), getSortByList());
+		Collection<Object> ids = getEntityProvider().getAllEntityIdentifiers(this, getAppliedFiltersAsConjunction(),
+				getSortByList());
 		if (isWriteThrough() || !bufferingDelegate.isModified()) {
 			return ids;
 		} else {
@@ -941,15 +902,15 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	public EntityItem<T> createEntityItem(T entity) {
 		return new JPAContainerItem<T>(this, entity, null, false);
 	}
-	
+
 	public EntityGenerator<T> getEntityGenerator() {
 		return this.entityGenerator;
 	}
-	
+
 	public void setEntityGenerator(EntityGenerator<T> entityGenerator) {
 		this.entityGenerator = entityGenerator;
 	}
-	
+
 	@Override
 	public EntityItem<T> createEntityItem() {
 		return createEntityItem(getEntityGenerator().createEntity());
@@ -962,8 +923,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	}
 
 	@Override
-	public boolean removeContainerProperty(Object propertyId)
-			throws UnsupportedOperationException {
+	public boolean removeContainerProperty(Object propertyId) throws UnsupportedOperationException {
 		assert propertyId != null : "propertyId must not be null";
 		boolean result = propertyList.removeProperty(propertyId.toString());
 		updateFilterablePropertyIds();
@@ -972,8 +932,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 
 	@Override
 	public int size() {
-		int origSize = doGetEntityProvider().getEntityCount(this,
-				getAppliedFiltersAsConjunction());
+		int origSize = doGetEntityProvider().getEntityCount(this, getAppliedFiltersAsConjunction());
 		if (isWriteThrough()) {
 			return origSize;
 		} else {
@@ -997,8 +956,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 		} else if (getAppliedFilters().size() == 1) {
 			return getAppliedFilters().iterator().next();
 		} else {
-			return new And(CollectionUtil.toArray(Filter.class,
-					getAppliedFilters()));
+			return new And(CollectionUtil.toArray(Filter.class, getAppliedFilters()));
 		}
 	}
 
@@ -1043,10 +1001,9 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	}
 
 	@Override
-	public void addContainerFilter(Object propertyId, String filterString,
-			boolean ignoreCase, boolean onlyMatchPrefix) {
-		addContainerFilter(new SimpleStringFilter(propertyId, filterString,
-				ignoreCase, onlyMatchPrefix));
+	public void addContainerFilter(Object propertyId, String filterString, boolean ignoreCase,
+			boolean onlyMatchPrefix) {
+		addContainerFilter(new SimpleStringFilter(propertyId, filterString, ignoreCase, onlyMatchPrefix));
 		if (!isApplyFiltersImmediately()) {
 			applyFilters();
 		}
@@ -1076,8 +1033,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 * @see com.vaadin.data.Container.Filterable#addContainerFilter(com.vaadin.data.Container.Filter)
 	 */
 	@Override
-	public void addContainerFilter(Filter filter)
-			throws UnsupportedFilterException {
+	public void addContainerFilter(Filter filter) throws UnsupportedFilterException {
 		filterSupport.addFilter(filter);
 	}
 
@@ -1104,16 +1060,15 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 * {@inheritDoc }
 	 */
 	@Override
-	public Item addItemAt(int index, Object newItemId)
-			throws UnsupportedOperationException {
+	public Item addItemAt(int index, Object newItemId) throws UnsupportedOperationException {
 		throw new UnsupportedOperationException();
 	}
 
 	@Override
 	public Object getIdByIndex(int index) {
 		if (isWriteThrough()) {
-			return doGetEntityProvider().getEntityIdentifierAt(this,
-					getAppliedFiltersAsConjunction(), getSortByList(), index);
+			return doGetEntityProvider().getEntityIdentifierAt(this, getAppliedFiltersAsConjunction(), getSortByList(),
+					index);
 		} else {
 			int addedItems = bufferingDelegate.getAddedItemIds().size();
 			if (index < addedItems) {
@@ -1121,8 +1076,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 			} else {
 				index -= addedItems;
 				index = bufferingDelegate.fixDbIndexWithDeletedItems(index);
-				Object itemId = doGetEntityProvider().getEntityIdentifierAt(
-						this, getAppliedFiltersAsConjunction(),
+				Object itemId = doGetEntityProvider().getEntityIdentifierAt(this, getAppliedFiltersAsConjunction(),
 						getSortByList(), index);
 				return itemId;
 			}
@@ -1145,8 +1099,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 		int size = size();
 		if (size > 100) {
 			Logger.getLogger(getClass().getName())
-					.warning(
-							"(JPAContainer) WARNING! Invoking indexOfId() when size > 100 is not recommended!");
+					.warning("(JPAContainer) WARNING! Invoking indexOfId() when size > 100 is not recommended!");
 		}
 		for (int i = 0; i < size; i++) {
 			Object id = getIdByIndex(i);
@@ -1172,11 +1125,9 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 * @throws UnsupportedOperationException
 	 *             if the entity provider does not support editing.
 	 */
-	protected void requireWritableContainer() throws IllegalStateException,
-			UnsupportedOperationException {
+	protected void requireWritableContainer() throws IllegalStateException, UnsupportedOperationException {
 		if (!(entityProvider instanceof MutableEntityProvider)) {
-			throw new UnsupportedOperationException(
-					"EntityProvider does not support editing");
+			throw new UnsupportedOperationException("EntityProvider does not support editing");
 		}
 		if (readOnly) {
 			throw new IllegalStateException("Container is read only");
@@ -1185,15 +1136,13 @@ public class JPAContainer<T> implements EntityContainer<T>,
 
 	@Override
 	@Deprecated
-	public Object addEntity(T entity) throws UnsupportedOperationException,
-			IllegalStateException {
+	public Object addEntity(T entity) throws UnsupportedOperationException, IllegalStateException {
 		assert entity != null : "entity must not be null";
 		requireWritableContainer();
 
 		Object id;
 		if (isWriteThrough()) {
-			T result = ((MutableEntityProvider<T>) getEntityProvider())
-					.addEntity(entity);
+			T result = ((MutableEntityProvider<T>) getEntityProvider()).addEntity(entity);
 			id = getIdentifierPropertyValue(result);
 		} else {
 			id = bufferingDelegate.addEntity(entity);
@@ -1237,15 +1186,13 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	}
 
 	@Override
-	public boolean removeItem(Object itemId)
-			throws UnsupportedOperationException {
+	public boolean removeItem(Object itemId) throws UnsupportedOperationException {
 		assert itemId != null : "itemId must not be null";
 		requireWritableContainer();
 
 		if (isWriteThrough()) {
 			if (getEntityProvider().containsEntity(this, itemId, null)) {
-				((MutableEntityProvider<T>) getEntityProvider())
-						.removeEntity(itemId);
+				((MutableEntityProvider<T>) getEntityProvider()).removeEntity(itemId);
 				setFireItemSetChangeOnProviderChange(false);
 				try {
 					fireContainerItemSetChange(new ItemRemovedEvent(itemId));
@@ -1257,8 +1204,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 				return false;
 			}
 		} else {
-			if (bufferingDelegate.isAdded(itemId)
-					|| getEntityProvider().containsEntity(this, itemId, null)) {
+			if (bufferingDelegate.isAdded(itemId) || getEntityProvider().containsEntity(this, itemId, null)) {
 				bufferingDelegate.deleteItem(itemId);
 				setFireItemSetChangeOnProviderChange(false);
 				try {
@@ -1287,8 +1233,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 * depending on the state of the <code>writeThrough</code> property <i>of
 	 * the container</i>.
 	 * <p>
-	 * If <code>item</code> has no item ID ({@link JPAContainerItem#getItemId() }
-	 * ), this method does nothing.
+	 * If <code>item</code> has no item ID (
+	 * {@link JPAContainerItem#getItemId() } ), this method does nothing.
 	 * 
 	 * @see #isWriteThrough()
 	 * @param item
@@ -1296,8 +1242,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 * @param propertyId
 	 *            the ID of the modified property (must not be null).
 	 */
-	void containerItemPropertyModified(JPAContainerItem<T> item,
-			String propertyId) {
+	void containerItemPropertyModified(JPAContainerItem<T> item, String propertyId) {
 		assert item != null : "item must not be null";
 		assert propertyId != null : "propertyId must not be null";
 
@@ -1308,9 +1253,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
 
 			Object itemId = item.getItemId();
 			if (isWriteThrough()) {
-				((MutableEntityProvider<T>) getEntityProvider())
-						.updateEntityProperty(itemId, propertyId, item
-								.getItemProperty(propertyId).getValue());
+				((MutableEntityProvider<T>) getEntityProvider()).updateEntityProperty(itemId, propertyId,
+						item.getItemProperty(propertyId).getValue());
 				item.setDirty(false);
 			} else {
 				bufferingDelegate.updateEntity(itemId, item.getEntity());
@@ -1351,11 +1295,9 @@ public class JPAContainer<T> implements EntityContainer<T>,
 			T e;
 			if (itemPersistent) {
 				assert item.getItemId() != null;
-				e = ((MutableEntityProvider<T>) getEntityProvider())
-						.updateEntity(item.getEntity());
+				e = ((MutableEntityProvider<T>) getEntityProvider()).updateEntity(item.getEntity());
 			} else {
-				e = ((MutableEntityProvider<T>) getEntityProvider())
-						.addEntity(item.getEntity());
+				e = ((MutableEntityProvider<T>) getEntityProvider()).addEntity(item.getEntity());
 			}
 			assert e != null;
 			item.updateEntity(e);
@@ -1367,12 +1309,11 @@ public class JPAContainer<T> implements EntityContainer<T>,
 			if (itemPersistent) {
 				assert item.getItemId() != null;
 				itemId = item.getItemId();
-				bufferingDelegate.updateEntity(item.getItemId(),
-						item.getEntity());
+				bufferingDelegate.updateEntity(item.getItemId(), item.getEntity());
 			} else {
 				itemId = bufferingDelegate.addEntity(item.getEntity());
 				item.setItemId(itemId);
-				//but still not persistent
+				// but still not persistent
 			}
 		}
 
@@ -1383,7 +1324,8 @@ public class JPAContainer<T> implements EntityContainer<T>,
 			} else {
 				fireContainerItemSetChange(new ItemPersistedEvent(itemId));
 			}
-			//FIXME: dovrei tirare firePropertyChangeEvent per tutte le property
+			// FIXME: dovrei tirare firePropertyChangeEvent per tutte le
+			// property
 		} finally {
 			setFireItemSetChangeOnProviderChange(true);
 		}
@@ -1393,8 +1335,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	public void commit() throws SourceException, InvalidValueException {
 		if (!isWriteThrough() && isModified()) {
 			if (writeThrough.size() > MAX_NESTED_COMMITS) {
-				throw new IllegalStateException(
-						"commit() has been called recursively 5 time within commit execution");
+				throw new IllegalStateException("commit() has been called recursively 5 time within commit execution");
 			}
 			// during a commit (eg. inside a listener) one can call again commit
 			writeThrough.push(true);
@@ -1448,8 +1389,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	}
 
 	public boolean isWriteThrough() {
-		return !(doGetEntityProvider() instanceof BatchableEntityProvider)
-				|| writeThrough.peek();
+		return !(doGetEntityProvider() instanceof BatchableEntityProvider) || writeThrough.peek();
 	}
 
 	/**
@@ -1468,8 +1408,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 * <b>Note</b>, that write-through mode can only be turned off if the entity
 	 * provider implements the {@link BatchableEntityProvider} interface.
 	 */
-	public void setWriteThrough(boolean writeThrough) throws SourceException,
-			InvalidValueException {
+	public void setWriteThrough(boolean writeThrough) throws SourceException, InvalidValueException {
 		if (isWriteThrough() == writeThrough) {
 			return;
 		}
@@ -1486,15 +1425,13 @@ public class JPAContainer<T> implements EntityContainer<T>,
 				this.writeThrough.pop();
 				this.writeThrough.push(false);
 			} else {
-				throw new UnsupportedOperationException(
-						"EntityProvider is not batchable");
+				throw new UnsupportedOperationException("EntityProvider is not batchable");
 			}
 		}
 	}
 
 	@Override
-	public void setAutoCommit(boolean autoCommit) throws SourceException,
-			InvalidValueException {
+	public void setAutoCommit(boolean autoCommit) throws SourceException, InvalidValueException {
 		setWriteThrough(autoCommit);
 	}
 
@@ -1520,8 +1457,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 		} else {
 			StringBuilder sb = new StringBuilder(parentProperty);
 			sb.append('.');
-			sb.append(getEntityClassMetadata().getIdentifierProperty()
-					.getName());
+			sb.append(getEntityClassMetadata().getIdentifierProperty().getName());
 			parentIdProperty = sb.toString();
 		}
 	}
@@ -1556,8 +1492,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 				return Collections.emptyList();
 			}
 		} else {
-			return doGetEntityProvider().getAllEntityIdentifiers(this,
-					getChildrenFilter(itemId), getSortByList());
+			return doGetEntityProvider().getAllEntityIdentifiers(this, getChildrenFilter(itemId), getSortByList());
 		}
 	}
 
@@ -1568,8 +1503,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 		} else {
 			EntityItem<T> item = getItem(itemId);
 			@SuppressWarnings("unchecked")
-			T parent = item == null ? null : (T) item.getItemProperty(
-					parentProperty).getValue();
+			T parent = item == null ? null : (T) item.getItemProperty(parentProperty).getValue();
 			if (parent == null) {
 				return null;
 			} else {
@@ -1600,8 +1534,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 * {@inheritDoc }
 	 */
 	@Override
-	public boolean setChildrenAllowed(Object itemId, boolean areChildrenAllowed)
-			throws UnsupportedOperationException {
+	public boolean setChildrenAllowed(Object itemId, boolean areChildrenAllowed) throws UnsupportedOperationException {
 		throw new UnsupportedOperationException();
 	}
 
@@ -1612,8 +1545,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 * {@inheritDoc }
 	 */
 	@Override
-	public boolean setParent(Object itemId, Object newParentId)
-			throws UnsupportedOperationException {
+	public boolean setParent(Object itemId, Object newParentId) throws UnsupportedOperationException {
 		throw new UnsupportedOperationException();
 	}
 
@@ -1699,9 +1631,9 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	}
 
 	/**
-	 * Event fired by {@link JPAContainer#containsId(java.lang.Object) } when the
-	 * result is false and {@link #isContainsIdFiresItemSetChangeIfNotFound() }
-	 * is true.
+	 * Event fired by {@link JPAContainer#containsId(java.lang.Object) } when
+	 * the result is false and
+	 * {@link #isContainsIdFiresItemSetChangeIfNotFound() } is true.
 	 * 
 	 * @author Petter Holmström (Vaadin Ltd)
 	 * @since 1.0
@@ -1809,7 +1741,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 			super(itemId);
 		}
 	}
-	
+
 	public class ItemPersistedEvent extends ItemUpdatedEvent {
 
 		private static final long serialVersionUID = 3354471987822030822L;
@@ -1817,7 +1749,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 		protected ItemPersistedEvent(Object itemId) {
 			super(itemId);
 		}
-		
+
 	}
 
 	/**
@@ -1860,11 +1792,9 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	public void refreshItem(Object itemId) {
 		LinkedList<WeakReference<JPAContainerItem<T>>> linkedList = null;
 		synchronized (getItemRegistry()) {
-			LinkedList<WeakReference<JPAContainerItem<T>>> origList = getItemRegistry()
-					.get(itemId);
+			LinkedList<WeakReference<JPAContainerItem<T>>> origList = getItemRegistry().get(itemId);
 			if (origList != null) {
-				linkedList = (LinkedList<WeakReference<JPAContainerItem<T>>>) origList
-						.clone();
+				linkedList = new LinkedList<WeakReference<JPAContainerItem<T>>>(origList);
 			}
 		}
 		if (linkedList != null) {
@@ -1906,8 +1836,7 @@ public class JPAContainer<T> implements EntityContainer<T>,
 	 * @param queryModifierDelegate
 	 *            the delegate.
 	 */
-	public void setQueryModifierDelegate(
-			QueryModifierDelegate queryModifierDelegate) {
+	public void setQueryModifierDelegate(QueryModifierDelegate queryModifierDelegate) {
 		this.queryModifierDelegate = queryModifierDelegate;
 	}
 

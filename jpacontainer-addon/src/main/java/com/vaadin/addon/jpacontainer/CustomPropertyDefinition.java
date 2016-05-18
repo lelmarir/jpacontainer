@@ -2,6 +2,7 @@ package com.vaadin.addon.jpacontainer;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import com.vaadin.addon.jpacontainer.metadata.PropertyKind;
 import com.vaadin.data.Property;
@@ -9,14 +10,14 @@ import com.vaadin.data.Property.ReadOnlyException;
 
 public abstract class CustomPropertyDefinition<E, T> extends PropertyDefinition<E, T> {
 
+	private static final Logger LOGGER = Logger.getLogger(CustomPropertyDefinition.class.toString());
+
 	public class CustomEntityItemProperty implements EntityItemProperty<E, T> {
 
 		private final EntityItem<E> entityItem;
 		private final Class<T> type;
 
 		private List<ValueChangeListener> listeners;
-
-		private boolean modified = false;
 
 		public CustomEntityItemProperty(EntityItem<E> entityItem, Class<T> type) {
 			assert entityItem != null;
@@ -26,12 +27,12 @@ public abstract class CustomPropertyDefinition<E, T> extends PropertyDefinition<
 
 		@Override
 		public T getValue() {
-			return (T) CustomPropertyDefinition.this.getPropertyValue(getItem().getEntity());
+			return (T) CustomPropertyDefinition.this.getPropertyValue(getItem());
 		}
 
 		@Override
 		public void setValue(T newValue) throws ReadOnlyException {
-			CustomPropertyDefinition.this.setPropertyValue(getItem().getEntity(), newValue);
+			throw new UnsupportedOperationException();
 		}
 
 		@Override
@@ -41,12 +42,14 @@ public abstract class CustomPropertyDefinition<E, T> extends PropertyDefinition<
 
 		@Override
 		public boolean isReadOnly() {
-			return !CustomPropertyDefinition.this.isWritable();
+			return true;
 		}
 
 		@Override
 		public void setReadOnly(boolean newStatus) {
-			CustomPropertyDefinition.this.setWriteable(!newStatus);
+			if (newStatus == false) {
+				throw new UnsupportedOperationException();
+			}
 		}
 
 		@Override
@@ -90,7 +93,7 @@ public abstract class CustomPropertyDefinition<E, T> extends PropertyDefinition<
 				ValueChangeEvent event = new ValueChangeEvent() {
 					@Override
 					public Property getProperty() {
-						return getProperty();
+						return CustomEntityItemProperty.this;
 					}
 				};
 				for (ValueChangeListener l : listeners) {
@@ -101,6 +104,7 @@ public abstract class CustomPropertyDefinition<E, T> extends PropertyDefinition<
 
 		@Override
 		public boolean isModified() {
+			// always writeThrough
 			return false;
 		}
 
@@ -123,16 +127,22 @@ public abstract class CustomPropertyDefinition<E, T> extends PropertyDefinition<
 
 	}
 
-	private String propertyId;
-	private Class<T> type;
+	private final JPAContainer<E> container;
+	private final String propertyId;
+	private final Class<T> type;
 
-	public CustomPropertyDefinition(String propertyId, Class<T> type) {
+	public CustomPropertyDefinition(JPAContainer<E> container, String propertyId, Class<T> type) {
 		this.propertyId = propertyId;
 		this.type = type;
+		this.container = container;
 	}
 
 	@Override
-	public abstract T getPropertyValue(E object);
+	public abstract T getPropertyValue(EntityItem<E> entityItem);
+
+	protected void firePropertyValueChangeEvent(Object itemId) {
+		this.container.firePropertyValueChangeEvent(itemId, getPropertyId());
+	}
 
 	@Override
 	public void setPropertyValue(E object, T propertyValue) throws ReadOnlyException {
