@@ -161,6 +161,9 @@ public class PropertyMetadata implements Serializable {
 
     @Override
     public boolean equals(Object obj) {
+    	if (obj == null){
+    		return false;
+    	}
         if (obj.getClass() == getClass()) {
             PropertyMetadata other = (PropertyMetadata) obj;
             return name.equals(other.name)

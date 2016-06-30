@@ -64,7 +64,6 @@ public class ElementCollectionEditor extends CustomField implements
     final private Action[] actions = new Action[] { add, remove };
     private BeanItemContainer container;
     private Table table;
-    private String backReferencePropertyId;
     private final EntityContainer<?> containerForProperty;
     private Strategy strategy;
 
@@ -129,7 +128,6 @@ public class ElementCollectionEditor extends CustomField implements
             List<Object> asList = new ArrayList<Object>(
                     Arrays.asList(getTable().getVisibleColumns()));
             asList.remove("id");
-            asList.remove(backReferencePropertyId);
             visibleProperties = asList.toArray();
         }
         getTable().setPageLength(5);

@@ -472,6 +472,9 @@ public class ClassMetadata<E> implements Serializable {
 
     @Override
     public boolean equals(Object obj) {
+    	if (obj == null){
+    		return false;
+    	}
         if (obj.getClass() == getClass()) {
             ClassMetadata<?> other = (ClassMetadata<?>) obj;
             return mappedClass.equals(other.mappedClass)

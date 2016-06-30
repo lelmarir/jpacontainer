@@ -904,7 +904,7 @@ class CachingSupport<T> implements Serializable {
         for (Object filter : array) {
             FilterCacheEntry filterCacheEntry = filterCache.get(filter);
             if (filterCacheEntry.entityCount != null) {
-                synchronized (filterCacheEntry.entityCount) {
+                synchronized (filterCache) {
                     filterCacheEntry.entityCount = null;
                 }
             }

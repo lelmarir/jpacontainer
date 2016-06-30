@@ -55,6 +55,9 @@ public class Name implements Serializable, Cloneable {
 
 	@Override
 	public boolean equals(Object obj) {
+		if (obj == null){
+    		return false;
+    	}
 		if (obj.getClass() == getClass()) {
 			Name other = (Name) obj;
 			return ObjectUtils.equals(this.firstName, other.firstName)

@@ -79,6 +79,9 @@ public class EmbeddedIdPerson implements Serializable, Cloneable {
 
 	@Override
 	public boolean equals(Object obj) {
+		if (obj == null){
+    		return false;
+    	}
 		if (obj.getClass() == getClass()) {
 			EmbeddedIdPerson other = (EmbeddedIdPerson) obj;
 			return ObjectUtils.equals(name, other.name)

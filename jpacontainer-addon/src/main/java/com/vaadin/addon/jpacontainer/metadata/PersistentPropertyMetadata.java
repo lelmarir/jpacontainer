@@ -144,7 +144,7 @@ public class PersistentPropertyMetadata extends PropertyMetadata {
      */
     PersistentPropertyMetadata(String name, ClassMetadata<?> type,
             PropertyKind propertyKind, Field field, Method setter) {
-        super(name, type.getMappedClass(), null, setter);
+        super(name, type!=null?type.getMappedClass():null, null, setter);
         assert type != null : "type must not be null";
         assert propertyKind == PropertyKind.MANY_TO_ONE
                 || propertyKind == PropertyKind.ONE_TO_ONE
@@ -178,7 +178,7 @@ public class PersistentPropertyMetadata extends PropertyMetadata {
      */
     PersistentPropertyMetadata(String name, ClassMetadata<?> type,
             PropertyKind propertyKind, Method getter, Method setter) {
-        super(name, type.getMappedClass(), getter, setter);
+        super(name, type!=null?type.getMappedClass():null, getter, setter);
         assert type != null : "type must not be null";
         assert propertyKind == PropertyKind.MANY_TO_ONE
                 || propertyKind == PropertyKind.ONE_TO_ONE
