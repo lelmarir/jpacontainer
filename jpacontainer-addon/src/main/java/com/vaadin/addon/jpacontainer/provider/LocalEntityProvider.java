@@ -45,7 +45,7 @@ import com.vaadin.addon.jpacontainer.LazyLoadingDelegate;
 import com.vaadin.addon.jpacontainer.QueryModifierDelegate;
 import com.vaadin.addon.jpacontainer.SortBy;
 import com.vaadin.addon.jpacontainer.filter.util.AdvancedFilterableSupport;
-import com.vaadin.addon.jpacontainer.filter.util.FilterConverter;
+import com.vaadin.addon.jpacontainer.filter.util.JPAFilterConverterFactory;
 import com.vaadin.addon.jpacontainer.metadata.EntityClassMetadata;
 import com.vaadin.addon.jpacontainer.metadata.MetadataFactory;
 import com.vaadin.addon.jpacontainer.metadata.PropertyKind;
@@ -388,7 +388,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
 
         List<Predicate> predicates = new ArrayList<Predicate>();
         if (filter != null) {
-            predicates.add(FilterConverter.convertFilter(filter, cb, root));
+            predicates.add(JPAFilterConverterFactory.convertFilter(filter, cb, root));
         }
         tellDelegateFiltersWillBeAdded(container, cb, query, predicates);
         if (!predicates.isEmpty()) {
@@ -439,7 +439,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
         predicates.add(cb.equal(root.get(entityIdPropertyName),
                 cb.literal(entityId)));
         if (filter != null) {
-            predicates.add(FilterConverter.convertFilter(filter, cb, root));
+            predicates.add(JPAFilterConverterFactory.convertFilter(filter, cb, root));
         }
         tellDelegateFiltersWillBeAdded(container, cb, query, predicates);
         if (!predicates.isEmpty()) {
@@ -522,7 +522,7 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
 
         List<Predicate> predicates = new ArrayList<Predicate>();
         if (filter != null) {
-            predicates.add(FilterConverter.convertFilter(filter, cb, root));
+            predicates.add(JPAFilterConverterFactory.convertFilter(filter, cb, root));
         }
         tellDelegateFiltersWillBeAdded(container, cb, query, predicates);
         if (!predicates.isEmpty()) {
