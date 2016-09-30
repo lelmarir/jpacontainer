@@ -264,7 +264,6 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 	 * @param event
 	 *            the event to publish (must not be null).
 	 */
-	@SuppressWarnings("unchecked")
 	protected void fireContainerItemSetChange(final ItemSetChangeEvent event) {
 		assert event != null : "event must not be null";
 		if (listeners == null || !fireContainerItemSetChangeEvents) {

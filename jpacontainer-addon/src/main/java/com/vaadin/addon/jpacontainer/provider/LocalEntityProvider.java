@@ -388,7 +388,10 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
 
         List<Predicate> predicates = new ArrayList<Predicate>();
         if (filter != null) {
-            predicates.add(JPAFilterConverterFactory.convertFilter(filter, cb, root));
+        	Predicate predicate = JPAFilterConverterFactory.convertFilter(filter, cb, root);
+        	if(predicate != null){
+        		predicates.add(predicate);
+        	}
         }
         tellDelegateFiltersWillBeAdded(container, cb, query, predicates);
         if (!predicates.isEmpty()) {
