@@ -36,11 +36,6 @@ import com.vaadin.data.Container.Filter;
  * @since 2.0
  */
 public interface QueryModifierDelegate extends Serializable {
-	
-	public interface CacheAware {
-		boolean isCachingPermitted();
-	}
-	
     /**
      * This method is called after the {@link CriteriaQuery} instance (
      * <code>query</code>) has been instantiated, but before any state has been
