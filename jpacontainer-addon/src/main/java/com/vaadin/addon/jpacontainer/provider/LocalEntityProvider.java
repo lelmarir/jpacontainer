@@ -410,6 +410,21 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
         query.orderBy(orderBy);
         tellDelegateOrderByWereAdded(container, cb, query);
 
+        if (hasJoins(query)) {
+			// TODO: potrebbe non essere sempre quello che si vuole
+			query.distinct(true);
+			if(!sortBy.isEmpty()){
+				// devo aggiungere i campi del sort alla select
+				fieldsToSelect = new ArrayList<>(fieldsToSelect);
+				for (SortBy sortByProperty : sortBy) {
+					String p = sortByProperty.getPropertyId().toString();
+					if (!fieldsToSelect.contains(p)) {
+						fieldsToSelect.add(p);
+					}
+				}
+			}
+		}
+        
         if (fieldsToSelect.size() > 1
                 || getEntityClassMetadata().hasEmbeddedIdentifier()) {
             List<Path<?>> paths = new ArrayList<Path<?>>();
@@ -426,6 +441,15 @@ public class LocalEntityProvider<T> implements EntityProvider<T>, Serializable {
         return doGetEntityManager().createQuery(query);
     }
 
+    private boolean hasJoins(CriteriaQuery<Object> query) {
+		for (Root<?> root : query.getRoots()) {
+			if (!root.getJoins().isEmpty()) {
+				return true;
+			}
+		}
+		return false;
+	}
+    
     protected boolean doContainsEntity(EntityContainer<T> container,
             Object entityId, Filter filter) {
         assert entityId != null : "entityId must not be null";

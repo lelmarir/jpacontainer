@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ivy-module version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
-    <info organisation="com.vaadin.addon" module="jpacontainer" branch="bonfiglioli" revision="0.10.6.78-SNAPSHOT" status="integration" publication="20161110101320">
+    <info organisation="com.vaadin.addon" module="jpacontainer" branch="bonfiglioli" revision="0.10.7.90-SNAPSHOT" status="integration" publication="20161116131649">
 	</info>
 	<configurations>
 		<!-- The default configuration, which should be deployed to the server -->

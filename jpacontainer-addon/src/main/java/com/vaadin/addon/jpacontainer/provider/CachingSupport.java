@@ -27,6 +27,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.persistence.TypedQuery;
 
@@ -485,7 +486,16 @@ class CachingSupport<T> implements Serializable {
         if (fetchMax > 0) {
             query.setMaxResults(fetchMax);
         }
-        return query.getResultList();
+        List<Object> resultList = query.getResultList();
+        //se la result list contiene una lista di array significa che sono state aggiunte delle colonne al select. La prima è l'id che mi interessa
+        if(!resultList.isEmpty() && resultList.iterator().next().getClass().isArray()) {
+        	ArrayList<Object> list = new ArrayList<>(resultList.size());
+			for(Object e : resultList) {
+        		list.add(((Object[])e)[0]);
+        	}
+        	resultList = list;
+        }
+        return resultList;
     }
 
     /**
