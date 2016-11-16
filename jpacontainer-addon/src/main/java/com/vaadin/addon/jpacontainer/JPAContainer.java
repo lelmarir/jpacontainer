@@ -321,16 +321,17 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 	 * @throws IllegalStateException
 	 *             if the entity provider was null.
 	 */
-	protected EntityProvider<T> doGetEntityProvider() throws IllegalStateException {
-		if (entityProvider == null) {
+	protected EntityProvider<T> getNotNullEntityProvider() throws IllegalStateException {
+		EntityProvider<T> ep = getEntityProvider();
+		if (ep == null) {
 			throw new IllegalStateException("No EntityProvider has been set");
 		}
-		return entityProvider;
+		return ep;
 	}
 
 	@Override
 	public boolean isReadOnly() {
-		return !(doGetEntityProvider() instanceof MutableEntityProvider) || readOnly;
+		return !(getNotNullEntityProvider() instanceof MutableEntityProvider) || readOnly;
 	}
 
 	@Override
@@ -343,20 +344,20 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 		}
 		this.entityProvider = entityProvider;
 		// Register listener with new provider
-		registerProvider();
+		registerProvider(this.entityProvider);
 	}
 
 	@SuppressWarnings("unchecked")
-	private void registerProvider() {
-		if (this.entityProvider instanceof EntityProviderChangeNotifier) {
-			((EntityProviderChangeNotifier<T>) this.entityProvider).addListener(this);
+	private void registerProvider(EntityProvider<T> entityProvider) {
+		if (entityProvider instanceof EntityProviderChangeNotifier) {
+			((EntityProviderChangeNotifier<T>) entityProvider).addListener(this);
 		}
 	}
 
 	private void readObject(java.io.ObjectInputStream in) throws IOException, ClassNotFoundException {
 		in.defaultReadObject();
 		// reattach to weak listener list of provider
-		registerProvider();
+		registerProvider(getEntityProvider());
 	}
 
 	private boolean fireItemSetChangeOnProviderChange = true;
@@ -452,7 +453,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 		if (readOnly) {
 			this.readOnly = readOnly;
 		} else {
-			if (doGetEntityProvider() instanceof MutableEntityProvider) {
+			if (getNotNullEntityProvider() instanceof MutableEntityProvider) {
 				this.readOnly = readOnly;
 			} else {
 				throw new UnsupportedOperationException("EntityProvider is not mutable");
@@ -560,7 +561,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 	@Override
 	public Object firstItemId() {
 		if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()) {
-			Object itemId = doGetEntityProvider().getFirstEntityIdentifier(this, getAppliedFiltersAsConjunction(),
+			Object itemId = getNotNullEntityProvider().getFirstEntityIdentifier(this, getAppliedFiltersAsConjunction(),
 					getSortByList());
 			if (itemId != null && !isWriteThrough() && bufferingDelegate.getDeletedItemIds().contains(itemId)) {
 				itemId = nextItemId(itemId);
@@ -585,7 +586,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 
 	@Override
 	public Object lastItemId() {
-		Object itemId = doGetEntityProvider().getLastEntityIdentifier(this, getAppliedFiltersAsConjunction(),
+		Object itemId = getNotNullEntityProvider().getLastEntityIdentifier(this, getAppliedFiltersAsConjunction(),
 				getSortByList());
 		if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()) {
 			return itemId;
@@ -603,7 +604,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 		// Note, we do not check if given itemId is deleted as we use this
 		// method recursively to get itemId that is not deleted
 		if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty() || !bufferingDelegate.isAdded(itemId)) {
-			Object id = doGetEntityProvider().getNextEntityIdentifier(this, itemId, getAppliedFiltersAsConjunction(),
+			Object id = getNotNullEntityProvider().getNextEntityIdentifier(this, itemId, getAppliedFiltersAsConjunction(),
 					getSortByList());
 			if (id != null && !isWriteThrough() && bufferingDelegate.isDeleted(id)) {
 				id = nextItemId(id);
@@ -612,7 +613,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 		} else {
 			int ix = bufferingDelegate.getAddedItemIds().indexOf(itemId);
 			if (ix == bufferingDelegate.getAddedItemIds().size() - 1) {
-				Object id = doGetEntityProvider().getFirstEntityIdentifier(this, getAppliedFiltersAsConjunction(),
+				Object id = getNotNullEntityProvider().getFirstEntityIdentifier(this, getAppliedFiltersAsConjunction(),
 						getSortByList());
 				if (id != null && bufferingDelegate.isDeleted(id)) {
 					id = nextItemId(id);
@@ -629,7 +630,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 		// Note, we do not check if given itemId is deleted as we use this
 		// method recursively to get itemId that is not deleted
 		if (isWriteThrough() || bufferingDelegate.getAddedItemIds().isEmpty()) {
-			Object id = doGetEntityProvider().getPreviousEntityIdentifier(this, itemId,
+			Object id = getNotNullEntityProvider().getPreviousEntityIdentifier(this, itemId,
 					getAppliedFiltersAsConjunction(), getSortByList());
 			if (id != null && !isWriteThrough() && bufferingDelegate.isDeleted(id)) {
 				id = prevItemId(id);
@@ -644,7 +645,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 					return bufferingDelegate.getAddedItemIds().get(ix - 1);
 				}
 			} else {
-				Object prevId = doGetEntityProvider().getPreviousEntityIdentifier(this, itemId,
+				Object prevId = getNotNullEntityProvider().getPreviousEntityIdentifier(this, itemId,
 						getAppliedFiltersAsConjunction(), getSortByList());
 				if (prevId == null) {
 					return bufferingDelegate.getAddedItemIds().get(bufferingDelegate.getAddedItemIds().size() - 1);
@@ -750,10 +751,10 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 	 */
 	protected boolean doContainsId(Object itemId) {
 		if (isWriteThrough()) {
-			return doGetEntityProvider().containsEntity(this, itemId, getAppliedFiltersAsConjunction());
+			return getNotNullEntityProvider().containsEntity(this, itemId, getAppliedFiltersAsConjunction());
 		} else {
 			return bufferingDelegate.isAdded(itemId) || (!bufferingDelegate.isDeleted(itemId)
-					&& doGetEntityProvider().containsEntity(this, itemId, getAppliedFiltersAsConjunction()));
+					&& getNotNullEntityProvider().containsEntity(this, itemId, getAppliedFiltersAsConjunction()));
 		}
 	}
 
@@ -796,7 +797,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 			return null;
 		}
 		if (isWriteThrough() || !bufferingDelegate.isModified()) {
-			T entity = doGetEntityProvider().getEntity(this, itemId);
+			T entity = getNotNullEntityProvider().getEntity(this, itemId);
 			return entity != null ? new JPAContainerItem<T>(this, entity) : null;
 		} else {
 			if (bufferingDelegate.isAdded(itemId)) {
@@ -808,7 +809,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 				item.setDirty(true);
 				return item;
 			} else if (bufferingDelegate.isDeleted(itemId)) {
-				T entity = doGetEntityProvider().getEntity(this, itemId);
+				T entity = getNotNullEntityProvider().getEntity(this, itemId);
 				if (entity != null) {
 					JPAContainerItem<T> item = new JPAContainerItem<T>(this, entity);
 					item.setDeleted(true);
@@ -817,7 +818,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 					return null;
 				}
 			} else {
-				T entity = doGetEntityProvider().getEntity(this, itemId);
+				T entity = getNotNullEntityProvider().getEntity(this, itemId);
 				return entity != null ? new JPAContainerItem<T>(this, entity) : null;
 			}
 		}
@@ -931,7 +932,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 
 	@Override
 	public int size() {
-		int origSize = doGetEntityProvider().getEntityCount(this, getAppliedFiltersAsConjunction());
+		int origSize = getNotNullEntityProvider().getEntityCount(this, getAppliedFiltersAsConjunction());
 		if (isWriteThrough()) {
 			return origSize;
 		} else {
@@ -1066,7 +1067,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 	@Override
 	public Object getIdByIndex(int index) {
 		if (isWriteThrough()) {
-			return doGetEntityProvider().getEntityIdentifierAt(this, getAppliedFiltersAsConjunction(), getSortByList(),
+			return getNotNullEntityProvider().getEntityIdentifierAt(this, getAppliedFiltersAsConjunction(), getSortByList(),
 					index);
 		} else {
 			int addedItems = bufferingDelegate.getAddedItemIds().size();
@@ -1075,7 +1076,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 			} else {
 				index -= addedItems;
 				index = bufferingDelegate.fixDbIndexWithDeletedItems(index);
-				Object itemId = doGetEntityProvider().getEntityIdentifierAt(this, getAppliedFiltersAsConjunction(),
+				Object itemId = getNotNullEntityProvider().getEntityIdentifierAt(this, getAppliedFiltersAsConjunction(),
 						getSortByList(), index);
 				return itemId;
 			}
@@ -1125,7 +1126,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 	 *             if the entity provider does not support editing.
 	 */
 	protected void requireWritableContainer() throws IllegalStateException, UnsupportedOperationException {
-		if (!(entityProvider instanceof MutableEntityProvider)) {
+		if (!(getEntityProvider() instanceof MutableEntityProvider)) {
 			throw new UnsupportedOperationException("EntityProvider does not support editing");
 		}
 		if (readOnly) {
@@ -1380,7 +1381,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 	}
 
 	public boolean isReadThrough() {
-		EntityProvider<T> ep = doGetEntityProvider();
+		EntityProvider<T> ep = getNotNullEntityProvider();
 		if (ep instanceof CachingEntityProvider) {
 			return !((CachingEntityProvider<T>) ep).isCacheEnabled();
 		}
@@ -1388,7 +1389,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 	}
 
 	public boolean isWriteThrough() {
-		return !(doGetEntityProvider() instanceof BatchableEntityProvider) || writeThrough.peek();
+		return !(getNotNullEntityProvider() instanceof BatchableEntityProvider) || writeThrough.peek();
 	}
 
 	/**
@@ -1420,7 +1421,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 				this.writeThrough.push(true);
 			}
 		} else {
-			if (doGetEntityProvider() instanceof BatchableEntityProvider) {
+			if (getNotNullEntityProvider() instanceof BatchableEntityProvider) {
 				this.writeThrough.pop();
 				this.writeThrough.push(false);
 			} else {
@@ -1491,7 +1492,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 				return Collections.emptyList();
 			}
 		} else {
-			return doGetEntityProvider().getAllEntityIdentifiers(this, getChildrenFilter(itemId), getSortByList());
+			return getNotNullEntityProvider().getAllEntityIdentifiers(this, getChildrenFilter(itemId), getSortByList());
 		}
 	}
 
@@ -1813,7 +1814,7 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 	 */
 	@Override
 	public void refresh() {
-		doGetEntityProvider().refresh();
+		getNotNullEntityProvider().refresh();
 		bufferingDelegate.discard();
 		synchronized (getItemRegistry()) {
 			for (Object id : getItemRegistry().keySet().toArray()) {
