@@ -185,7 +185,6 @@ public class MutableLocalEntityProvider<T> extends LocalEntityProvider<T>
             public void run() {
                 EntityManager em = getEntityManager();
                 entityA[0] = em.merge(entity);
-                em.flush();
             }
         });
         T dEntity = detachEntity((T) entityA[0]);

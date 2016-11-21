@@ -25,7 +25,7 @@ import com.vaadin.data.util.converter.Converter.ConversionException;
  * @author Petter Holmström (Vaadin Ltd)
  * @since 1.0
  */
-public interface EntityItemProperty<E, T> extends Property<T>,
+public interface EntityItemProperty<T, P> extends Property<P>,
         Property.ValueChangeNotifier {
 
     /**
@@ -33,7 +33,7 @@ public interface EntityItemProperty<E, T> extends Property<T>,
      * 
      * @return the item (never null).
      */
-    public EntityItem<E> getItem();
+    public EntityItem<T> getItem();
     
     /**
      * Gets the property id of this property.

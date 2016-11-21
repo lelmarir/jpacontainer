@@ -1253,8 +1253,8 @@ public class JPAContainer<T> implements EntityContainer<T>, EntityProviderChange
 
 			Object itemId = item.getItemId();
 			if (isWriteThrough()) {
-				((MutableEntityProvider<T>) getEntityProvider()).updateEntityProperty(itemId, propertyId,
-						item.getItemProperty(propertyId).getValue());
+				//the new property value has been set to the entity, now i need to merge it (thus leveraging optimistic locks if used)
+				((MutableEntityProvider<T>) getEntityProvider()).updateEntity(item.getEntity());
 				item.setDirty(false);
 			} else {
 				bufferingDelegate.updateEntity(itemId, item.getEntity());

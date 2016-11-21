@@ -17,6 +17,11 @@
 package com.vaadin.addon.jpacontainer;
 
 import java.util.Collection;
+import java.util.Set;
+
+import javax.persistence.metamodel.PluralAttribute;
+import javax.persistence.metamodel.SetAttribute;
+import javax.persistence.metamodel.SingularAttribute;
 
 import com.vaadin.data.Buffered;
 import com.vaadin.data.Item;
@@ -162,6 +167,10 @@ public interface EntityItem<T> extends Item, Buffered,
      */
     @Override
     public EntityItemProperty getItemProperty(Object id);
+
+    public <P> EntityItemProperty<T, P> getItemProperty(SingularAttribute<T, P> attribute);
+
+    public <P, C> JPAContainerItemPluralProperty<T, C> getItemProperty(PluralAttribute<T, C, P> attribute);
 
     /**
      * Originally, all nested properties are inherited from the

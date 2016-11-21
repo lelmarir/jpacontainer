@@ -53,9 +53,9 @@ import com.vaadin.data.util.NestedPropertyDescriptor;
  * @author Petter Holmström (Vaadin Ltd)
  * @since 1.0
  */
-final class PropertyList<E> implements Serializable {
+final class PropertyList<T> implements Serializable {
 
-	public class MetadataPropertyDefinition<T> extends NestedPersistentProprtyDefinition<T> {
+	public class MetadataPropertyDefinition<E> extends NestedPersistentProprtyDefinition<E> {
 
 		public MetadataPropertyDefinition(PropertyMetadata pm) {
 			super(null, pm);
@@ -63,15 +63,15 @@ final class PropertyList<E> implements Serializable {
 
 	}
 
-	public abstract class NestedPropertyDefinition<T> extends PropertyDefinition<E, T> {
+	public abstract class NestedPropertyDefinition<P> extends PropertyDefinition<T, P> {
 
-		private final PropertyDefinition<E, ?> parent;
+		private final PropertyDefinition<T, ?> parent;
 
-		protected NestedPropertyDefinition(PropertyDefinition<E, ?> parent) {
+		protected NestedPropertyDefinition(PropertyDefinition<T, ?> parent) {
 			this.parent = parent;
 		}
 
-		protected PropertyDefinition<E, ?> getParent() {
+		protected PropertyDefinition<T, ?> getParent() {
 			return parent;
 		}
 
@@ -86,29 +86,33 @@ final class PropertyList<E> implements Serializable {
 
 		@SuppressWarnings("unchecked")
 		@Override
-		public T getPropertyValue(EntityItem<E> entityItem) {
+		public P getPropertyValue(EntityItem<T> entityItem) {
 			assert entityItem != null : "entityItem must not be null";
 			assert entityItem.getEntity() != null : "entity must not be null";
-			return (T) PropertyList.this.metadata.getPropertyValue(entityItem.getEntity(), getPropertyId());
+			return (P) PropertyList.this.metadata.getPropertyValue(entityItem.getEntity(), getPropertyId());
 		}
 
 		@Override
-		public void setPropertyValue(E object, T propertyValue) {
+		public void setPropertyValue(T object, P propertyValue) {
 			assert object != null : "entity must not be null";
 			PropertyList.this.metadata.setPropertyValue(object, getPropertyId(), propertyValue);
 		}
 
 		@Override
-		public EntityItemProperty<E, T> createProperty(JPAContainerItem<E> item) {
-			return new JPAContainerItemProperty<E, T>(item, getPropertyId());
+		public EntityItemProperty<T, P> createProperty(JPAContainerItem<T> item) {
+			if(Set.class.isAssignableFrom(getPropertyType(getPropertyId()))) {
+				return new JPAContainerItemPluralProperty<T, P>(item, getPropertyId());
+			}else{
+				return new JPAContainerItemProperty<T, P>(item, getPropertyId());
+			}
 		}
 	}
 
-	public class NestedPersistentProprtyDefinition<T> extends NestedPropertyDefinition<T> {
+	public class NestedPersistentProprtyDefinition<E> extends NestedPropertyDefinition<E> {
 
 		private PropertyMetadata pm;
 
-		public NestedPersistentProprtyDefinition(PropertyDefinition<E, ?> parent, PropertyMetadata pm) {
+		public NestedPersistentProprtyDefinition(PropertyDefinition<T, ?> parent, PropertyMetadata pm) {
 			super(parent);
 			this.pm = pm;
 			setWriteable(pm.isWritable());
@@ -150,8 +154,8 @@ final class PropertyList<E> implements Serializable {
 		}
 
 		@Override
-		public Class<T> getType() {
-			return (Class<T>) pm.getType();
+		public Class<E> getType() {
+			return (Class<E>) pm.getType();
 		}
 
 		@Override
@@ -160,12 +164,12 @@ final class PropertyList<E> implements Serializable {
 		}
 	}
 
-	public class NestedTransientProprtyDefinition<T> extends NestedPropertyDefinition<T> {
+	public class NestedTransientProprtyDefinition<E> extends NestedPropertyDefinition<E> {
 
 		private final Method propertyGetterMethod;
 		private final Method propertySetterMethod;
 
-		public NestedTransientProprtyDefinition(PropertyDefinition<E, ?> parent, Method propertyGetterMethod) {
+		public NestedTransientProprtyDefinition(PropertyDefinition<T, ?> parent, Method propertyGetterMethod) {
 			super(parent);
 			this.propertyGetterMethod = propertyGetterMethod;
 			/*
@@ -223,8 +227,8 @@ final class PropertyList<E> implements Serializable {
 		}
 
 		@Override
-		public Class<T> getType() {
-			return (Class<T>) propertyGetterMethod.getReturnType();
+		public Class<E> getType() {
+			return (Class<E>) propertyGetterMethod.getReturnType();
 		}
 
 		@Override
@@ -235,8 +239,8 @@ final class PropertyList<E> implements Serializable {
 	}
 
 	private static final long serialVersionUID = 372287057799712177L;
-	private ClassMetadata<E> metadata;
-	private Map<String, PropertyDefinition<E, Object>> properties = new HashMap<>();
+	private ClassMetadata<T> metadata;
+	private Map<String, PropertyDefinition<T, Object>> properties = new HashMap<>();
 	// private Set<String> propertyNames = new HashSet<String>();
 	private Set<String> persistentPropertyNames = new HashSet<String>();
 	// map from property name to the name of the property to be used to sort by
@@ -245,7 +249,7 @@ final class PropertyList<E> implements Serializable {
 	private Set<String> nestedPropertyNames = new HashSet<String>();
 	private Set<String> allPropertyNames = new HashSet<String>();
 
-	private PropertyList<E> parentList;
+	private PropertyList<T> parentList;
 
 	/**
 	 * Creates a new <code>PropertyList</code> for the specified metadata.
@@ -255,17 +259,17 @@ final class PropertyList<E> implements Serializable {
 	 * @param metadata
 	 *            the class metadata (must not be null).
 	 */
-	public PropertyList(ClassMetadata<E> metadata) {
+	public PropertyList(ClassMetadata<T> metadata) {
 		assert metadata != null : "metadata must not be null";
 		this.metadata = metadata;
 
 		for (PropertyMetadata pm : metadata.getProperties()) {
-			PropertyList<E>.MetadataPropertyDefinition<Object> pd = new MetadataPropertyDefinition(pm);
+			PropertyList<T>.MetadataPropertyDefinition<Object> pd = new MetadataPropertyDefinition(pm);
 			addProperty(pd);
 		}
 	}
 
-	public void addProperty(PropertyDefinition<E, Object> definition) {
+	public void addProperty(PropertyDefinition<T, Object> definition) {
 		String id = definition.getPropertyId();
 		if (properties.containsKey(id)) {
 			throw new IllegalStateException("The PropertyList already contains a property with the same name: " + id);
@@ -291,7 +295,7 @@ final class PropertyList<E> implements Serializable {
 	 * @param parentList
 	 *            the parent list (must not be null).
 	 */
-	public PropertyList(PropertyList<E> parentList) {
+	public PropertyList(PropertyList<T> parentList) {
 		assert parentList != null : "parentList must not be null";
 		this.parentList = parentList;
 		this.metadata = parentList.getClassMetadata();
@@ -303,7 +307,7 @@ final class PropertyList<E> implements Serializable {
 	 * 
 	 * @return the class metadata (never null).
 	 */
-	public ClassMetadata<E> getClassMetadata() {
+	public ClassMetadata<T> getClassMetadata() {
 		return metadata;
 	}
 
@@ -312,7 +316,7 @@ final class PropertyList<E> implements Serializable {
 	 * 
 	 * @return the parent list, or null if the list has no parent.
 	 */
-	public PropertyList<E> getParentList() {
+	public PropertyList<T> getParentList() {
 		return parentList;
 	}
 
@@ -397,10 +401,10 @@ final class PropertyList<E> implements Serializable {
 		if (propertyName.endsWith("*")) {
 			// We add a whole bunch of properties
 			String parentPropertyName = propertyName.substring(0, propertyName.length() - 2);
-			PropertyDefinition<E, ?> parentProperty = getOrCreateProperty(parentPropertyName);
+			PropertyDefinition<T, ?> parentProperty = getOrCreateProperty(parentPropertyName);
 			if (parentProperty instanceof PropertyList.NestedPersistentProprtyDefinition) {
 				// The parent property is persistent and contains metadata
-				ClassMetadata<?> parentTypeMetadata = ((PropertyList<E>.NestedPersistentProprtyDefinition<?>) parentProperty)
+				ClassMetadata<?> parentTypeMetadata = ((PropertyList<T>.NestedPersistentProprtyDefinition<?>) parentProperty)
 						.getTypeMetadata();
 				for (PropertyMetadata pm : parentTypeMetadata.getProperties()) {
 					NestedPersistentProprtyDefinition definition = new NestedPersistentProprtyDefinition(parentProperty,
@@ -410,7 +414,7 @@ final class PropertyList<E> implements Serializable {
 			} else if (parentProperty instanceof PropertyList.NestedTransientProprtyDefinition) {
 				// The parent property is transient or is a simple property that
 				// does not contain any nestable properties
-				Class<?> parentClass = ((PropertyList<E>.NestedTransientProprtyDefinition<?>) parentProperty).getType();
+				Class<?> parentClass = ((PropertyList<T>.NestedTransientProprtyDefinition<?>) parentProperty).getType();
 				for (Method m : parentClass.getMethods()) {
 					if (m.getName().startsWith("get") && m.getName().length() > 3
 							&& !Modifier.isStatic(m.getModifiers()) && m.getReturnType() != Void.TYPE
@@ -424,30 +428,30 @@ final class PropertyList<E> implements Serializable {
 			}
 		} else {
 			// We add a single property
-			PropertyDefinition<E, Object> np = getOrCreateProperty(propertyName);
+			PropertyDefinition<T, Object> np = getOrCreateProperty(propertyName);
 			addProperty(np);
 		}
 	}
 
-	public PropertyDefinition<E, Object> getProperty(String propertyName) throws IllegalArgumentException {
-		PropertyDefinition<E, Object> property = getProperty(propertyName, false);
+	public PropertyDefinition<T, Object> getProperty(String propertyName) throws IllegalArgumentException {
+		PropertyDefinition<T, Object> property = getProperty(propertyName, false);
 		if (property == null) {
 			throw new IllegalArgumentException("Illegal property name: " + propertyName);
 		}
 		return property;
 	}
 
-	private PropertyDefinition<E, Object> getOrCreateProperty(String propertyName) {
+	private PropertyDefinition<T, Object> getOrCreateProperty(String propertyName) {
 		return getProperty(propertyName, true);
 	}
 
-	private PropertyDefinition<E, Object> getProperty(String propertyName, boolean createIfNotExists)
+	private PropertyDefinition<T, Object> getProperty(String propertyName, boolean createIfNotExists)
 			throws IllegalArgumentException {
 		if (properties.containsKey(propertyName)) {
 			return properties.get(propertyName);
 		}
 		if (parentList != null) {
-			PropertyDefinition<E, Object> p = parentList.getProperty(propertyName, false);
+			PropertyDefinition<T, Object> p = parentList.getProperty(propertyName, false);
 			if (p != null) {
 				return p;
 			}
@@ -458,10 +462,10 @@ final class PropertyList<E> implements Serializable {
 				int offset = propertyName.lastIndexOf('.');
 				String parentName = propertyName.substring(0, offset);
 				String name = propertyName.substring(offset + 1);
-				PropertyDefinition<E, ?> parentProperty = getProperty(parentName, createIfNotExists);
+				PropertyDefinition<T, ?> parentProperty = getProperty(parentName, createIfNotExists);
 				NestedPropertyDefinition property;
 				if (parentProperty instanceof PropertyList.NestedPersistentProprtyDefinition) {
-					ClassMetadata<?> parentClassMetadata = ((PropertyList<E>.NestedPersistentProprtyDefinition<?>) parentProperty)
+					ClassMetadata<?> parentClassMetadata = ((PropertyList<T>.NestedPersistentProprtyDefinition<?>) parentProperty)
 							.getTypeMetadata();
 					PropertyMetadata pm = parentClassMetadata.getProperty(name);
 					if (pm == null) {
@@ -470,7 +474,7 @@ final class PropertyList<E> implements Serializable {
 						property = new NestedPersistentProprtyDefinition(parentProperty, pm);
 					}
 				} else if (parentProperty instanceof PropertyList.NestedTransientProprtyDefinition) {
-					Class<?> parentType = ((PropertyList<E>.NestedTransientProprtyDefinition<?>) parentProperty)
+					Class<?> parentType = ((PropertyList<T>.NestedTransientProprtyDefinition<?>) parentProperty)
 							.getType();
 					Method getter = getGetterMethod(name, parentType);
 					if (getter == null) {
@@ -526,7 +530,7 @@ final class PropertyList<E> implements Serializable {
 	 */
 	public boolean removeProperty(String propertyName) {
 		assert propertyName != null : "propertyName must not be null";
-		PropertyDefinition<E, ?> property = properties.remove(propertyName);
+		PropertyDefinition<T, ?> property = properties.remove(propertyName);
 		persistentPropertyNames.remove(propertyName);
 		sortablePropertyMap.remove(propertyName);
 		allPropertyNames.remove(propertyName);
@@ -668,7 +672,7 @@ final class PropertyList<E> implements Serializable {
 		if (!getAllAvailablePropertyNames().contains(propertyName)) {
 			throw new IllegalArgumentException("Illegal property name: " + propertyName);
 		}
-		PropertyDefinition<E, ?> property = getProperty(propertyName);
+		PropertyDefinition<T, ?> property = getProperty(propertyName);
 		if (property != null) {
 			return property.getType();
 		} else {
@@ -731,7 +735,7 @@ final class PropertyList<E> implements Serializable {
 	 * @throws IllegalArgumentException
 	 *             if the property name was illegal.
 	 */
-	public Object getPropertyValue(EntityItem<E> entityItem, String propertyName) throws IllegalArgumentException {
+	public Object getPropertyValue(EntityItem<T> entityItem, String propertyName) throws IllegalArgumentException {
 		assert propertyName != null : "propertyName must not be null";
 		assert entityItem != null : "entityItem must not be null";
 		if (!getAllAvailablePropertyNames().contains(propertyName)) {
@@ -757,7 +761,7 @@ final class PropertyList<E> implements Serializable {
 	 *             if one of the properties in the chain of nested properties
 	 *             was null.
 	 */
-	public void setPropertyValue(E object, String propertyName, Object propertyValue)
+	public void setPropertyValue(T object, String propertyName, Object propertyValue)
 			throws IllegalArgumentException, IllegalStateException {
 		assert propertyName != null : "propertyName must not be null";
 		assert object != null : "object must not be null";
@@ -772,7 +776,7 @@ final class PropertyList<E> implements Serializable {
 		if (!getAllAvailablePropertyNames().contains(propertyName)) {
 			throw new IllegalArgumentException("Illegal property name: " + propertyName);
 		}
-		PropertyDefinition<E, Object> property = getProperty(propertyName);
+		PropertyDefinition<T, Object> property = getProperty(propertyName);
 		return property.getKind();
 	}
 
